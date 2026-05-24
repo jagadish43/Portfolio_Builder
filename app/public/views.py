@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Any
 
@@ -16,6 +17,24 @@ router = APIRouter(tags=["public"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 SUBDOMAIN_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$")
+CONTACT_FIELDS = ("github", "leetcode", "linkedin", "email", "phone")
+THEME_OPTIONS = (
+    {
+        "slug": "default",
+        "label": "Default Theme",
+        "description": "Current split portfolio page with hero, side cards, and section blocks.",
+    },
+    {
+        "slug": "default_template1",
+        "label": "Template 1",
+        "description": "Left sidebar portfolio with scrolling content and editorial sections.",
+    },
+    {
+        "slug": "default_template2",
+        "label": "Template 2",
+        "description": "Dark bento dashboard portfolio with cards, stats, and project tiles.",
+    },
+)
 
 
 def _is_local_request(request: Request) -> bool:
@@ -55,6 +74,112 @@ def _extract_skills_from_bio(bio: str) -> list[str]:
             _, raw_skills = normalized_line.split(":", maxsplit=1)
             return [skill.strip() for skill in raw_skills.split(",") if skill.strip()]
     return []
+
+
+def _parse_json_object(raw: str | None, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
+    if not raw:
+        return dict(fallback or {})
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return dict(fallback or {})
+    return value if isinstance(value, dict) else dict(fallback or {})
+
+
+def _parse_json_list(raw: str | None) -> list[dict[str, Any]]:
+    if not raw:
+        return []
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _parse_skills(raw: str | None, bio: str = "") -> list[str]:
+    source = (raw or "").strip()
+    if source:
+        tokens = re.split(r"[\n,]", source)
+        return [token.strip() for token in tokens if token.strip()]
+    return _extract_skills_from_bio(bio)
+
+
+def _normalize_section_config(raw: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = raw or {}
+    contact_fields = payload.get("contact_fields", {})
+    return {
+        "education": True,
+        "projects": True,
+        "experience": bool(payload.get("experience", False)),
+        "skills": True,
+        "certificates": True,
+        "contact": bool(payload.get("contact", False)),
+        "contact_fields": {
+            name: bool(contact_fields.get(name, False)) for name in CONTACT_FIELDS
+        },
+    }
+
+
+def _default_form_data() -> dict[str, Any]:
+    return {
+        "step": "customize",
+        "subdomain": "",
+        "full_name": "",
+        "title_tagline": "",
+        "bio": "",
+        "theme_slug": "default",
+        "is_published": True,
+        "education_text": "",
+        "skills_text": "",
+        "github_url": "",
+        "leetcode_url": "",
+        "linkedin_url": "",
+        "contact_email": "",
+        "phone_number": "",
+        "sections": _normalize_section_config(),
+        "projects": [{"title": "", "description": "", "live_url": ""}],
+        "experiences": [{"role": "", "company": "", "duration": "", "description": ""}],
+        "certificates": [{"name": "", "issuer": "", "year": "", "url": ""}],
+    }
+
+
+def _theme_slugs() -> set[str]:
+    return {theme["slug"] for theme in THEME_OPTIONS}
+
+
+def _sections_from_form(form: Any) -> dict[str, Any]:
+    return _normalize_section_config(
+        {
+            "experience": form.get("section_experience") == "yes",
+            "contact": form.get("section_contact") == "yes",
+            "contact_fields": {
+                "github": "contact_field_github" in form,
+                "leetcode": "contact_field_leetcode" in form,
+                "linkedin": "contact_field_linkedin" in form,
+                "email": "contact_field_email" in form,
+                "phone": "contact_field_phone" in form,
+            },
+        }
+    )
+
+
+def _deserialize_portfolio(portfolio: Portfolio) -> dict[str, Any]:
+    contact_data = _parse_json_object(portfolio.contact_data)
+    return {
+        "sections": _normalize_section_config(_parse_json_object(portfolio.section_config)),
+        "education_text": portfolio.education_text or "",
+        "skills": _parse_skills(portfolio.skills_text, portfolio.bio),
+        "experiences": _parse_json_list(portfolio.experiences_json),
+        "certificates": _parse_json_list(portfolio.certificates_json),
+        "contact_data": contact_data,
+        "contact_items": [
+            ("GitHub", contact_data.get("github_url", "")),
+            ("LeetCode", contact_data.get("leetcode_url", "")),
+            ("LinkedIn", contact_data.get("linkedin_url", "")),
+            ("Email", contact_data.get("contact_email", "")),
+            ("Phone Number", contact_data.get("phone_number", "")),
+        ],
+    }
 
 
 def _build_site_url(request: Request, subdomain: str) -> str:
@@ -132,20 +257,12 @@ def _render_portfolio_form(
     user: User,
     error: str | None = None,
     form_data: dict[str, Any] | None = None,
+    step: str = "customize",
 ) -> HTMLResponse:
-    defaults = {
-        "subdomain": "",
-        "full_name": "",
-        "title_tagline": "",
-        "bio": "",
-        "theme_slug": "default",
-        "is_published": True,
-        "project_title": "",
-        "project_description": "",
-        "project_live_url": "",
-    }
+    defaults = _default_form_data()
     if form_data:
         defaults.update(form_data)
+    defaults["step"] = step
     return _render_template(
         request,
         "portfolio_form.html",
@@ -153,6 +270,7 @@ def _render_portfolio_form(
             "current_user": user,
             "error": error,
             "form_data": defaults,
+            "theme_options": THEME_OPTIONS,
         },
         status_code=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK,
     )
@@ -214,8 +332,8 @@ async def render_public_portfolio(
     context: dict[str, Any] = {
         "portfolio": portfolio,
         "projects": portfolio.projects,
-        "skills": _extract_skills_from_bio(portfolio.bio),
         "site_url": _build_site_url(request, portfolio.subdomain),
+        **_deserialize_portfolio(portfolio),
     }
     return templates.TemplateResponse(
         request=request,
@@ -252,7 +370,7 @@ async def login(
         )
 
     request.session["user_id"] = user.id
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/portfolios/new", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
@@ -330,21 +448,12 @@ async def new_portfolio_page(
     user = _require_user(request, db)
     if isinstance(user, RedirectResponse):
         return user
-    return _render_portfolio_form(request, user)
+    return _render_portfolio_form(request, user, step="customize")
 
 
 @router.post("/portfolios/new", include_in_schema=False)
 async def create_portfolio(
     request: Request,
-    subdomain: str = Form(...),
-    full_name: str = Form(...),
-    title_tagline: str = Form(...),
-    bio: str = Form(...),
-    theme_slug: str = Form("default"),
-    is_published: str | None = Form(None),
-    project_title: str = Form(""),
-    project_description: str = Form(""),
-    project_live_url: str = Form(""),
     db: Session = Depends(get_db),
 ) -> Response:
 
@@ -352,26 +461,127 @@ async def create_portfolio(
     if isinstance(user, RedirectResponse):
         return user
 
-    normalized_subdomain = subdomain.strip().lower()
-    normalized_theme = theme_slug.strip().lower() or "default"
+    form = await request.form()
+    step_values = form.getlist("step")
+    step = step_values[-1] if step_values else "customize"
+
+    if step == "customize":
+        sections = _sections_from_form(form)
+        normalized_theme = form.get("theme_slug", "").strip().lower() or "default"
+        customize_data = {
+            "step": "details",
+            "theme_slug": normalized_theme,
+            "sections": sections,
+        }
+
+        if normalized_theme not in _theme_slugs():
+            return _render_portfolio_form(
+                request,
+                user,
+                error="Choose a valid theme option.",
+                form_data=customize_data,
+                step="customize",
+            )
+
+        return _render_portfolio_form(
+            request,
+            user,
+            form_data=customize_data,
+            step="details",
+        )
+
+    def cleaned_list(name: str) -> list[str]:
+        return [value.strip() for value in form.getlist(name)]
+
+    sections = _sections_from_form(form)
+
+    normalized_subdomain = form.get("subdomain", "").strip().lower()
+    normalized_theme = form.get("theme_slug", "").strip().lower() or "default"
     cleaned_data = {
         "subdomain": normalized_subdomain,
-        "full_name": full_name.strip(),
-        "title_tagline": title_tagline.strip(),
-        "bio": bio.strip(),
+        "full_name": form.get("full_name", "").strip(),
+        "title_tagline": form.get("title_tagline", "").strip(),
+        "bio": form.get("bio", "").strip(),
         "theme_slug": normalized_theme,
-        "is_published": is_published is not None,
-        "project_title": project_title.strip(),
-        "project_description": project_description.strip(),
-        "project_live_url": project_live_url.strip(),
+        "is_published": form.get("is_published") is not None,
+        "education_text": form.get("education_text", "").strip(),
+        "skills_text": form.get("skills_text", "").strip(),
+        "github_url": form.get("github_url", "").strip(),
+        "leetcode_url": form.get("leetcode_url", "").strip(),
+        "linkedin_url": form.get("linkedin_url", "").strip(),
+        "contact_email": form.get("contact_email", "").strip(),
+        "phone_number": form.get("phone_number", "").strip(),
+        "sections": sections,
+        "step": "details",
     }
+
+    project_titles = cleaned_list("project_title")
+    project_descriptions = cleaned_list("project_description")
+    project_urls = cleaned_list("project_live_url")
+    max_project_items = max(len(project_titles), len(project_descriptions), len(project_urls), 1)
+    projects: list[dict[str, str]] = []
+    for index in range(max_project_items):
+        item = {
+            "title": project_titles[index] if index < len(project_titles) else "",
+            "description": project_descriptions[index] if index < len(project_descriptions) else "",
+            "live_url": project_urls[index] if index < len(project_urls) else "",
+        }
+        if any(item.values()):
+            projects.append(item)
+
+    experience_roles = cleaned_list("experience_role")
+    experience_companies = cleaned_list("experience_company")
+    experience_durations = cleaned_list("experience_duration")
+    experience_descriptions = cleaned_list("experience_description")
+    max_experience_items = max(
+        len(experience_roles),
+        len(experience_companies),
+        len(experience_durations),
+        len(experience_descriptions),
+        1,
+    )
+    experiences: list[dict[str, str]] = []
+    for index in range(max_experience_items):
+        item = {
+            "role": experience_roles[index] if index < len(experience_roles) else "",
+            "company": experience_companies[index] if index < len(experience_companies) else "",
+            "duration": experience_durations[index] if index < len(experience_durations) else "",
+            "description": experience_descriptions[index] if index < len(experience_descriptions) else "",
+        }
+        if any(item.values()):
+            experiences.append(item)
+
+    certificate_names = cleaned_list("certificate_name")
+    certificate_issuers = cleaned_list("certificate_issuer")
+    certificate_years = cleaned_list("certificate_year")
+    certificate_urls = cleaned_list("certificate_url")
+    max_certificate_items = max(
+        len(certificate_names),
+        len(certificate_issuers),
+        len(certificate_years),
+        len(certificate_urls),
+        1,
+    )
+    certificates: list[dict[str, str]] = []
+    for index in range(max_certificate_items):
+        item = {
+            "name": certificate_names[index] if index < len(certificate_names) else "",
+            "issuer": certificate_issuers[index] if index < len(certificate_issuers) else "",
+            "year": certificate_years[index] if index < len(certificate_years) else "",
+            "url": certificate_urls[index] if index < len(certificate_urls) else "",
+        }
+        if any(item.values()):
+            certificates.append(item)
+
+    cleaned_data["projects"] = projects or _default_form_data()["projects"]
+    cleaned_data["experiences"] = experiences or _default_form_data()["experiences"]
+    cleaned_data["certificates"] = certificates or _default_form_data()["certificates"]
 
     if not all(
         [
             cleaned_data["subdomain"],
             cleaned_data["full_name"],
             cleaned_data["title_tagline"],
-            cleaned_data["bio"],
         ]
     ):
         return _render_portfolio_form(
@@ -379,6 +589,25 @@ async def create_portfolio(
             user,
             error="Fill in all required portfolio details.",
             form_data=cleaned_data,
+            step="details",
+        )
+
+    if not cleaned_data["education_text"]:
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Education is mandatory.",
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    if not _parse_skills(cleaned_data["skills_text"]):
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Add at least one skill.",
+            form_data=cleaned_data,
+            step="details",
         )
 
     if not SUBDOMAIN_PATTERN.match(normalized_subdomain):
@@ -387,6 +616,16 @@ async def create_portfolio(
             user,
             error="Subdomain must be 3-63 characters using lowercase letters, numbers, or hyphens.",
             form_data=cleaned_data,
+            step="details",
+        )
+
+    if normalized_theme not in _theme_slugs():
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Choose a valid theme option.",
+            form_data=cleaned_data,
+            step="details",
         )
 
     if db.query(Portfolio).filter(Portfolio.subdomain == normalized_subdomain).first() is not None:
@@ -395,17 +634,99 @@ async def create_portfolio(
             user,
             error="That subdomain is already in use.",
             form_data=cleaned_data,
+            step="details",
         )
 
-    has_project_title = bool(cleaned_data["project_title"])
-    has_project_description = bool(cleaned_data["project_description"])
-    if has_project_title != has_project_description:
+    invalid_project = any(bool(item["title"]) != bool(item["description"]) for item in projects)
+    if invalid_project:
         return _render_portfolio_form(
             request,
             user,
-            error="Provide both first project title and description, or leave both empty.",
+            error="Each project needs both a title and description.",
             form_data=cleaned_data,
+            step="details",
         )
+
+    valid_projects = [item for item in projects if item["title"] and item["description"]]
+    if not valid_projects:
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Add at least one project.",
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    invalid_experience = any(
+        any(item.values()) and (not item["role"] or not item["company"] or not item["description"])
+        for item in experiences
+    )
+    if invalid_experience:
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Each experience entry must include role, company, and description.",
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    valid_experiences = [
+        item for item in experiences if item["role"] and item["company"] and item["description"]
+    ]
+
+    invalid_certificate = any(
+        any(item.values()) and (not item["name"] or not item["issuer"])
+        for item in certificates
+    )
+    if invalid_certificate:
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Each certificate entry must include a certificate name and issuer.",
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    valid_certificates = [item for item in certificates if item["name"] and item["issuer"]]
+    if not valid_certificates:
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Add at least one certificate.",
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    if sections["contact"] and not any(sections["contact_fields"].values()):
+        return _render_portfolio_form(
+            request,
+            user,
+            error="Select at least one contact field when Contact Information is enabled.",
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    contact_key_map = {
+        "github": "github_url",
+        "leetcode": "leetcode_url",
+        "linkedin": "linkedin_url",
+        "email": "contact_email",
+        "phone": "phone_number",
+    }
+    if sections["contact"]:
+        missing_contact_values = [
+            field
+            for field, enabled in sections["contact_fields"].items()
+            if enabled and not cleaned_data[contact_key_map[field]]
+        ]
+        if missing_contact_values:
+            return _render_portfolio_form(
+                request,
+                user,
+                error="Fill in each enabled contact field.",
+                form_data=cleaned_data,
+                step="details",
+            )
 
     portfolio = Portfolio(
         user_id=user.id,
@@ -414,19 +735,44 @@ async def create_portfolio(
         full_name=cleaned_data["full_name"],
         title_tagline=cleaned_data["title_tagline"],
         bio=cleaned_data["bio"],
+        section_config=json.dumps(sections),
+        education_text=cleaned_data["education_text"],
+        skills_text=cleaned_data["skills_text"],
+        experiences_json=json.dumps(valid_experiences if sections["experience"] else []),
+        certificates_json=json.dumps(valid_certificates),
+        contact_data=json.dumps(
+            {
+                key: cleaned_data[key]
+                for key in (
+                    "github_url",
+                    "leetcode_url",
+                    "linkedin_url",
+                    "contact_email",
+                    "phone_number",
+                )
+                if sections["contact"]
+                and (
+                    (key == "github_url" and sections["contact_fields"]["github"])
+                    or (key == "leetcode_url" and sections["contact_fields"]["leetcode"])
+                    or (key == "linkedin_url" and sections["contact_fields"]["linkedin"])
+                    or (key == "contact_email" and sections["contact_fields"]["email"])
+                    or (key == "phone_number" and sections["contact_fields"]["phone"])
+                )
+            }
+        ),
         is_published=cleaned_data["is_published"],
     )
     db.add(portfolio)
     db.flush()
 
-    if has_project_title and has_project_description:
+    for index, item in enumerate(valid_projects):
         db.add(
             Project(
                 portfolio_id=portfolio.id,
-                title=cleaned_data["project_title"],
-                description=cleaned_data["project_description"],
-                live_url=cleaned_data["project_live_url"] or None,
-                display_order=0,
+                title=item["title"],
+                description=item["description"],
+                live_url=item["live_url"] or None,
+                display_order=index,
             )
         )
 

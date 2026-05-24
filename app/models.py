@@ -34,6 +34,12 @@ class Portfolio(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     title_tagline: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str] = mapped_column(Text, nullable=False)
+    section_config: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    education_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skills_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    experiences_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    certificates_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    contact_data: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     user: Mapped["User"] = relationship(back_populates="portfolios")

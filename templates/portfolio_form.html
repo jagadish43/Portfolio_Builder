@@ -3,17 +3,30 @@
 {% block title %}New Portfolio | Portfolio Builder{% endblock %}
 
 {% block content %}
-  <main class="mx-auto min-h-screen w-full max-w-5xl px-6 py-10 lg:px-10">
+  {% set sections = form_data.sections %}
+  {% set step = form_data.step %}
+  <main class="mx-auto min-h-screen w-full max-w-6xl px-6 py-10 lg:px-10">
     <section class="rounded-3xl border border-white/70 bg-white/90 p-8 shadow-card backdrop-blur">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Manual Portfolio Entry</p>
+          <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Portfolio Setup</p>
           <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900">Create a portfolio</h1>
-          <p class="mt-3 text-base text-slate-600">
-            Fill in the required details to generate a portfolio and preview it locally.
-          </p>
+          {% if step == "customize" %}
+            <p class="mt-3 max-w-3xl text-base text-slate-600">
+              First choose a theme and decide which optional sections should appear. After that, you will enter only the relevant details.
+            </p>
+          {% else %}
+            <p class="mt-3 max-w-3xl text-base text-slate-600">
+              Enter the portfolio details for the sections you selected in step 1.
+            </p>
+          {% endif %}
         </div>
         <a class="text-sm font-semibold text-slate-500 hover:text-accent" href="/">Back to dashboard</a>
+      </div>
+
+      <div class="mt-6 flex items-center gap-3 text-sm font-semibold">
+        <span class="rounded-full px-4 py-2 {% if step == 'customize' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">1. Customize</span>
+        <span class="rounded-full px-4 py-2 {% if step == 'details' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">2. Details</span>
       </div>
 
       {% if error %}
@@ -22,120 +35,613 @@
         </div>
       {% endif %}
 
-      <form class="mt-8 grid gap-6 md:grid-cols-2" method="post" action="/portfolios/new">
-        <label class="block">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">Subdomain *</span>
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            type="text"
-            name="subdomain"
-            placeholder="alex"
-            value="{{ form_data.subdomain }}"
-            required
-          />
-        </label>
+      {% if step == "customize" %}
+        <form class="mt-8 space-y-10" method="post" action="/portfolios/new">
+          <input type="hidden" name="step" value="customize" />
 
-        <label class="block">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">Theme slug</span>
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            type="text"
-            name="theme_slug"
-            placeholder="default"
-            value="{{ form_data.theme_slug }}"
-          />
-        </label>
+          <section class="space-y-5">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Theme</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-900">Choose a visual template</h2>
+              <p class="mt-2 text-sm text-slate-500">Each option includes a mini preview so users can understand the layout before continuing.</p>
+            </div>
+            <div class="grid gap-5 lg:grid-cols-3">
+              {% for theme in theme_options %}
+                <label class="block cursor-pointer">
+                  <input class="peer sr-only" type="radio" name="theme_slug" value="{{ theme.slug }}" {% if form_data.theme_slug == theme.slug %}checked{% endif %} />
+                  <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
+                    <div class="mb-4 flex items-center justify-between">
+                      <div>
+                        <h3 class="text-lg font-bold text-slate-900">{{ theme.label }}</h3>
+                        <p class="mt-1 text-xs leading-6 text-slate-500">{{ theme.description }}</p>
+                      </div>
+                      <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Preview</span>
+                    </div>
+                    {% if theme.slug == "default" %}
+                      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-3">
+                        <div class="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+                          <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
+                            <div class="h-5 w-24 rounded-full bg-teal-100"></div>
+                            <div class="mt-3 h-5 w-3/4 rounded-full bg-slate-800"></div>
+                            <div class="mt-2 h-3 w-1/2 rounded-full bg-slate-300"></div>
+                            <div class="mt-4 space-y-2">
+                              <div class="h-2 w-full rounded-full bg-slate-200"></div>
+                              <div class="h-2 w-5/6 rounded-full bg-slate-200"></div>
+                              <div class="h-2 w-2/3 rounded-full bg-slate-200"></div>
+                            </div>
+                          </div>
+                          <div class="space-y-3">
+                            <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
+                              <div class="h-4 w-16 rounded-full bg-slate-800"></div>
+                              <div class="mt-3 flex gap-2">
+                                <div class="h-6 w-12 rounded-full bg-slate-900"></div>
+                                <div class="h-6 w-12 rounded-full bg-slate-900"></div>
+                              </div>
+                            </div>
+                            <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
+                              <div class="h-4 w-20 rounded-full bg-slate-800"></div>
+                              <div class="mt-3 space-y-2">
+                                <div class="h-10 rounded-xl bg-slate-100"></div>
+                                <div class="h-10 rounded-xl bg-slate-100"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                          <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
+                            <div class="h-4 w-20 rounded-full bg-slate-800"></div>
+                            <div class="mt-3 h-12 rounded-xl bg-slate-100"></div>
+                          </div>
+                          <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
+                            <div class="h-4 w-24 rounded-full bg-slate-800"></div>
+                            <div class="mt-3 h-12 rounded-xl bg-slate-100"></div>
+                          </div>
+                        </div>
+                      </div>
+                    {% elif theme.slug == "default_template1" %}
+                      <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50">
+                        <div class="grid grid-cols-[0.75fr_1.25fr]">
+                          <div class="border-r border-neutral-200 bg-white p-3">
+                            <div class="h-5 w-20 rounded-full bg-neutral-900"></div>
+                            <div class="mt-2 h-2 w-full rounded-full bg-neutral-200"></div>
+                            <div class="mt-1 h-2 w-4/5 rounded-full bg-neutral-200"></div>
+                            <div class="mt-4 space-y-2">
+                              <div class="h-2 w-14 rounded-full bg-emerald-500"></div>
+                              <div class="h-2 w-12 rounded-full bg-neutral-300"></div>
+                              <div class="h-2 w-16 rounded-full bg-neutral-300"></div>
+                            </div>
+                            <div class="mt-8 h-2 w-24 rounded-full bg-neutral-300"></div>
+                          </div>
+                          <div class="bg-neutral-50 p-3">
+                            <div class="h-3 w-24 rounded-full bg-neutral-300"></div>
+                            <div class="mt-3 space-y-2">
+                              <div class="h-2 w-full rounded-full bg-neutral-200"></div>
+                              <div class="h-2 w-5/6 rounded-full bg-neutral-200"></div>
+                              <div class="h-2 w-4/6 rounded-full bg-neutral-200"></div>
+                            </div>
+                            <div class="mt-5 h-3 w-28 rounded-full bg-neutral-300"></div>
+                            <div class="mt-3 space-y-3">
+                              <div class="rounded-xl border border-dashed border-neutral-300 bg-white p-3">
+                                <div class="flex items-center justify-between">
+                                  <div class="h-3 w-24 rounded-full bg-neutral-800"></div>
+                                  <div class="h-2 w-12 rounded-full bg-emerald-500"></div>
+                                </div>
+                                <div class="mt-2 h-2 w-full rounded-full bg-neutral-200"></div>
+                              </div>
+                              <div class="rounded-xl border border-dashed border-neutral-300 bg-white p-3">
+                                <div class="flex items-center justify-between">
+                                  <div class="h-3 w-28 rounded-full bg-neutral-800"></div>
+                                  <div class="h-2 w-12 rounded-full bg-emerald-500"></div>
+                                </div>
+                                <div class="mt-2 h-2 w-5/6 rounded-full bg-neutral-200"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    {% else %}
+                      <div class="overflow-hidden rounded-2xl border border-slate-700 bg-[#0b0f19] p-3">
+                        <div class="grid grid-cols-4 gap-2">
+                          <div class="col-span-3 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
+                            <div class="h-5 w-24 rounded-full bg-white"></div>
+                            <div class="mt-2 h-2 w-5/6 rounded-full bg-slate-500"></div>
+                            <div class="mt-1 h-2 w-3/5 rounded-full bg-slate-500"></div>
+                            <div class="mt-4 flex gap-2">
+                              <div class="h-6 w-16 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
+                              <div class="h-6 w-16 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
+                            </div>
+                          </div>
+                          <div class="col-span-1 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
+                            <div class="h-4 w-12 rounded-full bg-white"></div>
+                            <div class="mt-3 space-y-2">
+                              <div class="h-8 rounded-xl border border-slate-700 bg-[#0b0f19]"></div>
+                              <div class="h-8 rounded-xl border border-slate-700 bg-[#0b0f19]"></div>
+                              <div class="h-8 rounded-xl border border-slate-700 bg-[#0b0f19]"></div>
+                            </div>
+                          </div>
+                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
+                            <div class="h-4 w-20 rounded-full bg-white"></div>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                              <div class="h-5 w-12 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
+                              <div class="h-5 w-12 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
+                              <div class="h-5 w-12 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
+                            </div>
+                          </div>
+                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
+                            <div class="grid grid-cols-2 gap-2">
+                              <div class="rounded-xl bg-[#0b0f19] p-2">
+                                <div class="h-5 w-10 rounded-full bg-blue-500"></div>
+                                <div class="mt-2 h-2 w-12 rounded-full bg-slate-500"></div>
+                              </div>
+                              <div class="rounded-xl bg-[#0b0f19] p-2">
+                                <div class="h-5 w-10 rounded-full bg-blue-500"></div>
+                                <div class="mt-2 h-2 w-12 rounded-full bg-slate-500"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
+                            <div class="h-16 rounded-xl border border-dashed border-slate-700 bg-[#0b0f19]"></div>
+                            <div class="mt-3 h-3 w-24 rounded-full bg-white"></div>
+                            <div class="mt-2 h-2 w-full rounded-full bg-slate-500"></div>
+                          </div>
+                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
+                            <div class="h-16 rounded-xl border border-dashed border-slate-700 bg-[#0b0f19]"></div>
+                            <div class="mt-3 h-3 w-28 rounded-full bg-white"></div>
+                            <div class="mt-2 h-2 w-5/6 rounded-full bg-slate-500"></div>
+                          </div>
+                        </div>
+                      </div>
+                    {% endif %}
+                  </article>
+                </label>
+              {% endfor %}
+            </div>
+          </section>
 
-        <label class="block">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">Full name *</span>
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            type="text"
-            name="full_name"
-            placeholder="Alex Johnson"
-            value="{{ form_data.full_name }}"
-            required
-          />
-        </label>
+          <section class="space-y-5">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Sections</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-900">Choose what to display</h2>
+            </div>
+            <div class="grid gap-4 lg:grid-cols-2">
+              <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Education</h3>
+                    <p class="mt-1 text-sm text-slate-500">Mandatory</p>
+                  </div>
+                  <span class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Always enabled</span>
+                </div>
+              </article>
 
-        <label class="block">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">Title or tagline *</span>
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            type="text"
-            name="title_tagline"
-            placeholder="Backend Engineer building scalable systems"
-            value="{{ form_data.title_tagline }}"
-            required
-          />
-        </label>
+              <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Projects</h3>
+                    <p class="mt-1 text-sm text-slate-500">Mandatory, at least one project required</p>
+                  </div>
+                  <span class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Always enabled</span>
+                </div>
+              </article>
 
-        <label class="block md:col-span-2">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">Bio *</span>
-          <textarea
-            class="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            name="bio"
-            placeholder="Write your portfolio summary here. Add a line such as Skills: FastAPI, PostgreSQL, Docker if needed."
-            required
-          >{{ form_data.bio }}</textarea>
-        </label>
+              <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Experience</h3>
+                    <p class="mt-1 text-sm text-slate-500">Optional, supports multiple entries</p>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm font-semibold text-slate-700">
+                    <label class="inline-flex items-center gap-2">
+                      <input type="radio" name="section_experience" value="yes" {% if sections.experience %}checked{% endif %} />
+                      <span>Yes</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                      <input type="radio" name="section_experience" value="no" {% if not sections.experience %}checked{% endif %} />
+                      <span>No</span>
+                    </label>
+                  </div>
+                </div>
+              </article>
 
-        <label class="block">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">First project title</span>
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            type="text"
-            name="project_title"
-            placeholder="Portfolio Builder"
-            value="{{ form_data.project_title }}"
-          />
-        </label>
+              <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Skills</h3>
+                    <p class="mt-1 text-sm text-slate-500">Mandatory</p>
+                  </div>
+                  <span class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Always enabled</span>
+                </div>
+              </article>
 
-        <label class="block">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">First project live URL</span>
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            type="url"
-            name="project_live_url"
-            placeholder="https://example.com"
-            value="{{ form_data.project_live_url }}"
-          />
-        </label>
+              <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Certificates</h3>
+                    <p class="mt-1 text-sm text-slate-500">Mandatory, supports multiple entries</p>
+                  </div>
+                  <span class="rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">Always enabled</span>
+                </div>
+              </article>
 
-        <label class="block md:col-span-2">
-          <span class="mb-2 block text-sm font-semibold text-slate-700">First project description</span>
-          <textarea
-            class="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
-            name="project_description"
-            placeholder="Describe what this project does."
-          >{{ form_data.project_description }}</textarea>
-        </label>
+              <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Contact Information</h3>
+                    <p class="mt-1 text-sm text-slate-500">Optional, choose contact fields in step 2</p>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm font-semibold text-slate-700">
+                    <label class="inline-flex items-center gap-2">
+                      <input type="radio" name="section_contact" value="yes" {% if sections.contact %}checked{% endif %} />
+                      <span>Yes</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                      <input type="radio" name="section_contact" value="no" {% if not sections.contact %}checked{% endif %} />
+                      <span>No</span>
+                    </label>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
 
-        <label class="inline-flex items-center gap-3 md:col-span-2">
-          <input
-            class="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
-            type="checkbox"
-            name="is_published"
-            {% if form_data.is_published %}checked{% endif %}
-          />
-          <span class="text-sm font-medium text-slate-700">Publish immediately</span>
-        </label>
+          <div class="flex flex-wrap gap-3">
+            <button class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">Continue to details</button>
+            <a class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300" href="/">Cancel</a>
+          </div>
+        </form>
+      {% else %}
+        <form class="mt-8 space-y-10" method="post" action="/portfolios/new">
+          <input type="hidden" name="step" value="details" />
+          <input type="hidden" name="theme_slug" value="{{ form_data.theme_slug }}" />
+          <input type="hidden" name="section_experience" value="{% if sections.experience %}yes{% else %}no{% endif %}" />
+          <input type="hidden" name="section_contact" value="{% if sections.contact %}yes{% else %}no{% endif %}" />
+          {% if sections.contact_fields.github %}<input type="hidden" name="contact_field_github" value="on" />{% endif %}
+          {% if sections.contact_fields.leetcode %}<input type="hidden" name="contact_field_leetcode" value="on" />{% endif %}
+          {% if sections.contact_fields.linkedin %}<input type="hidden" name="contact_field_linkedin" value="on" />{% endif %}
+          {% if sections.contact_fields.email %}<input type="hidden" name="contact_field_email" value="on" />{% endif %}
+          {% if sections.contact_fields.phone %}<input type="hidden" name="contact_field_phone" value="on" />{% endif %}
 
-        <div class="md:col-span-2 flex flex-wrap gap-3">
-          <button
-            class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            type="submit"
-          >
-            Create portfolio
-          </button>
-          <a
-            class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
-            href="/"
-          >
-            Cancel
-          </a>
-        </div>
-      </form>
+          <section class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Selected Theme</p>
+                <h2 class="mt-2 text-2xl font-bold text-slate-900">{{ theme_options | selectattr("slug", "equalto", form_data.theme_slug) | map(attribute="label") | first }}</h2>
+              </div>
+              <button class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="submit" name="step" value="customize">Back to customize</button>
+            </div>
+          </section>
+
+          <section class="grid gap-6 md:grid-cols-2">
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Subdomain *</span>
+              <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="text" name="subdomain" placeholder="alex" value="{{ form_data.subdomain }}" required />
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Full name *</span>
+              <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="text" name="full_name" placeholder="Alex Johnson" value="{{ form_data.full_name }}" required />
+            </label>
+
+            <label class="block md:col-span-2">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Title or tagline *</span>
+              <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="text" name="title_tagline" placeholder="Backend Engineer building scalable systems" value="{{ form_data.title_tagline }}" required />
+            </label>
+
+            <label class="block md:col-span-2">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Intro / summary</span>
+              <textarea class="min-h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" name="bio" placeholder="Write a short introduction that appears at the top of the portfolio.">{{ form_data.bio }}</textarea>
+            </label>
+          </section>
+
+          <section class="space-y-6">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Education</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-900">Education details</h2>
+            </div>
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Education *</span>
+              <textarea class="min-h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" name="education_text" placeholder="B.Tech in Computer Science, XYZ University, 2022">{{ form_data.education_text }}</textarea>
+            </label>
+          </section>
+
+          <section class="space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Projects</p>
+                <h2 class="mt-2 text-2xl font-bold text-slate-900">Project entries</h2>
+              </div>
+              <button class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="button" data-add-item="projects">Add project</button>
+            </div>
+            <div class="space-y-4" data-repeater-list="projects">
+              {% for project in form_data.projects %}
+                <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5" data-repeater-item="projects">
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <label class="block">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Project title *</span>
+                      <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="project_title" value="{{ project.title }}" placeholder="Portfolio Builder" />
+                    </label>
+                    <label class="block">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Live URL</span>
+                      <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="url" name="project_live_url" value="{{ project.live_url }}" placeholder="https://example.com" />
+                    </label>
+                    <label class="block md:col-span-2">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Description *</span>
+                      <textarea class="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" name="project_description" placeholder="Describe what this project does.">{{ project.description }}</textarea>
+                    </label>
+                  </div>
+                  <div class="mt-4 flex justify-end">
+                    <button class="text-sm font-semibold text-rose-600 hover:text-rose-700" type="button" data-remove-item="projects">Remove</button>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </section>
+
+          {% if sections.experience %}
+            <section class="space-y-6">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Experience</p>
+                  <h2 class="mt-2 text-2xl font-bold text-slate-900">Experience entries</h2>
+                </div>
+                <button class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="button" data-add-item="experience">Add experience</button>
+              </div>
+              <div class="space-y-4" data-repeater-list="experience">
+                {% for experience in form_data.experiences %}
+                  <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5" data-repeater-item="experience">
+                    <div class="grid gap-4 md:grid-cols-2">
+                      <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Role *</span>
+                        <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="experience_role" value="{{ experience.role }}" placeholder="Software Engineer" />
+                      </label>
+                      <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Company *</span>
+                        <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="experience_company" value="{{ experience.company }}" placeholder="Acme Inc." />
+                      </label>
+                      <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Duration</span>
+                        <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="experience_duration" value="{{ experience.duration }}" placeholder="2022 - Present" />
+                      </label>
+                      <label class="block md:col-span-2">
+                        <span class="mb-2 block text-sm font-semibold text-slate-700">Description *</span>
+                        <textarea class="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" name="experience_description" placeholder="Summarize the work and impact.">{{ experience.description }}</textarea>
+                      </label>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                      <button class="text-sm font-semibold text-rose-600 hover:text-rose-700" type="button" data-remove-item="experience">Remove</button>
+                    </div>
+                  </article>
+                {% endfor %}
+              </div>
+            </section>
+          {% endif %}
+
+          <section class="space-y-6">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Skills</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-900">Skills list</h2>
+            </div>
+            <label class="block">
+              <span class="mb-2 block text-sm font-semibold text-slate-700">Skills *</span>
+              <textarea class="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" name="skills_text" placeholder="FastAPI, PostgreSQL, Docker">{{ form_data.skills_text }}</textarea>
+            </label>
+          </section>
+
+          <section class="space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Certificates</p>
+                <h2 class="mt-2 text-2xl font-bold text-slate-900">Certificate entries</h2>
+              </div>
+              <button class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="button" data-add-item="certificates">Add certificate</button>
+            </div>
+            <div class="space-y-4" data-repeater-list="certificates">
+              {% for certificate in form_data.certificates %}
+                <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5" data-repeater-item="certificates">
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <label class="block">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Certificate name *</span>
+                      <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="certificate_name" value="{{ certificate.name }}" placeholder="AWS Certified Cloud Practitioner" />
+                    </label>
+                    <label class="block">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Issuer *</span>
+                      <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="certificate_issuer" value="{{ certificate.issuer }}" placeholder="Amazon Web Services" />
+                    </label>
+                    <label class="block">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Year</span>
+                      <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="certificate_year" value="{{ certificate.year }}" placeholder="2024" />
+                    </label>
+                    <label class="block">
+                      <span class="mb-2 block text-sm font-semibold text-slate-700">Credential URL</span>
+                      <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="url" name="certificate_url" value="{{ certificate.url }}" placeholder="https://example.com/certificate" />
+                    </label>
+                  </div>
+                  <div class="mt-4 flex justify-end">
+                    <button class="text-sm font-semibold text-rose-600 hover:text-rose-700" type="button" data-remove-item="certificates">Remove</button>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </section>
+
+          {% if sections.contact %}
+            <section class="space-y-6">
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Contact Information</p>
+                <h2 class="mt-2 text-2xl font-bold text-slate-900">Contact details</h2>
+                <p class="mt-2 text-sm text-slate-500">Choose the contact methods you want to publish, then fill only those values.</p>
+              </div>
+
+              <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <input type="checkbox" name="contact_field_github" data-contact-toggle="github" {% if sections.contact_fields.github %}checked{% endif %} />
+                  <span class="text-sm font-semibold text-slate-700">GitHub</span>
+                </label>
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <input type="checkbox" name="contact_field_leetcode" data-contact-toggle="leetcode" {% if sections.contact_fields.leetcode %}checked{% endif %} />
+                  <span class="text-sm font-semibold text-slate-700">LeetCode</span>
+                </label>
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <input type="checkbox" name="contact_field_linkedin" data-contact-toggle="linkedin" {% if sections.contact_fields.linkedin %}checked{% endif %} />
+                  <span class="text-sm font-semibold text-slate-700">LinkedIn</span>
+                </label>
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <input type="checkbox" name="contact_field_email" data-contact-toggle="email" {% if sections.contact_fields.email %}checked{% endif %} />
+                  <span class="text-sm font-semibold text-slate-700">Email</span>
+                </label>
+                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <input type="checkbox" name="contact_field_phone" data-contact-toggle="phone" {% if sections.contact_fields.phone %}checked{% endif %} />
+                  <span class="text-sm font-semibold text-slate-700">Phone Number</span>
+                </label>
+              </div>
+
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="block" data-contact-field="github" {% if not sections.contact_fields.github %}hidden{% endif %}>
+                  <span class="mb-2 block text-sm font-semibold text-slate-700">GitHub URL</span>
+                  <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="url" name="github_url" value="{{ form_data.github_url }}" placeholder="https://github.com/username" />
+                </label>
+                <label class="block" data-contact-field="leetcode" {% if not sections.contact_fields.leetcode %}hidden{% endif %}>
+                  <span class="mb-2 block text-sm font-semibold text-slate-700">LeetCode URL</span>
+                  <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="url" name="leetcode_url" value="{{ form_data.leetcode_url }}" placeholder="https://leetcode.com/u/username" />
+                </label>
+                <label class="block" data-contact-field="linkedin" {% if not sections.contact_fields.linkedin %}hidden{% endif %}>
+                  <span class="mb-2 block text-sm font-semibold text-slate-700">LinkedIn URL</span>
+                  <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="url" name="linkedin_url" value="{{ form_data.linkedin_url }}" placeholder="https://linkedin.com/in/username" />
+                </label>
+                <label class="block" data-contact-field="email" {% if not sections.contact_fields.email %}hidden{% endif %}>
+                  <span class="mb-2 block text-sm font-semibold text-slate-700">Email</span>
+                  <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="email" name="contact_email" value="{{ form_data.contact_email }}" placeholder="name@example.com" />
+                </label>
+                <label class="block" data-contact-field="phone" {% if not sections.contact_fields.phone %}hidden{% endif %}>
+                  <span class="mb-2 block text-sm font-semibold text-slate-700">Phone number</span>
+                  <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="text" name="phone_number" value="{{ form_data.phone_number }}" placeholder="+1 555 123 4567" />
+                </label>
+              </div>
+            </section>
+          {% endif %}
+
+          <label class="inline-flex items-center gap-3">
+            <input class="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent" type="checkbox" name="is_published" {% if form_data.is_published %}checked{% endif %} />
+            <span class="text-sm font-medium text-slate-700">Publish immediately</span>
+          </label>
+
+          <div class="flex flex-wrap gap-3">
+            <button class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">Create portfolio</button>
+            <button class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="submit" name="step" value="customize">Back</button>
+          </div>
+        </form>
+      {% endif %}
     </section>
   </main>
+
+  <template id="template-projects">
+    <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5" data-repeater-item="projects">
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Project title *</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="project_title" placeholder="Portfolio Builder" />
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Live URL</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="url" name="project_live_url" placeholder="https://example.com" />
+        </label>
+        <label class="block md:col-span-2">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Description *</span>
+          <textarea class="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" name="project_description" placeholder="Describe what this project does."></textarea>
+        </label>
+      </div>
+      <div class="mt-4 flex justify-end">
+        <button class="text-sm font-semibold text-rose-600 hover:text-rose-700" type="button" data-remove-item="projects">Remove</button>
+      </div>
+    </article>
+  </template>
+
+  <template id="template-experience">
+    <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5" data-repeater-item="experience">
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Role *</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="experience_role" placeholder="Software Engineer" />
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Company *</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="experience_company" placeholder="Acme Inc." />
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Duration</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="experience_duration" placeholder="2022 - Present" />
+        </label>
+        <label class="block md:col-span-2">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Description *</span>
+          <textarea class="min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" name="experience_description" placeholder="Summarize the work and impact."></textarea>
+        </label>
+      </div>
+      <div class="mt-4 flex justify-end">
+        <button class="text-sm font-semibold text-rose-600 hover:text-rose-700" type="button" data-remove-item="experience">Remove</button>
+      </div>
+    </article>
+  </template>
+
+  <template id="template-certificates">
+    <article class="rounded-3xl border border-slate-200 bg-slate-50 p-5" data-repeater-item="certificates">
+      <div class="grid gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Certificate name *</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="certificate_name" placeholder="AWS Certified Cloud Practitioner" />
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Issuer *</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="certificate_issuer" placeholder="Amazon Web Services" />
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Year</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="text" name="certificate_year" placeholder="2024" />
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Credential URL</span>
+          <input class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-accent" type="url" name="certificate_url" placeholder="https://example.com/certificate" />
+        </label>
+      </div>
+      <div class="mt-4 flex justify-end">
+        <button class="text-sm font-semibold text-rose-600 hover:text-rose-700" type="button" data-remove-item="certificates">Remove</button>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const syncContactField = (key, enabled) => {
+      const field = document.querySelector(`[data-contact-field="${key}"]`);
+      if (!field) return;
+      field.hidden = !enabled;
+      field.querySelectorAll("input").forEach((input) => {
+        input.disabled = !enabled;
+      });
+    };
+
+    document.querySelectorAll("[data-contact-toggle]").forEach((input) => {
+      input.addEventListener("change", () => syncContactField(input.dataset.contactToggle, input.checked));
+      syncContactField(input.dataset.contactToggle, input.checked);
+    });
+
+    document.querySelectorAll("[data-add-item]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const key = button.dataset.addItem;
+        const template = document.getElementById(`template-${key}`);
+        const list = document.querySelector(`[data-repeater-list="${key}"]`);
+        if (!template || !list) return;
+        list.appendChild(template.content.cloneNode(true));
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const key = target.dataset.removeItem;
+      if (!key) return;
+      const list = document.querySelector(`[data-repeater-list="${key}"]`);
+      if (!list) return;
+      if (list.querySelectorAll(`[data-repeater-item="${key}"]`).length <= 1) return;
+      target.closest(`[data-repeater-item="${key}"]`)?.remove();
+    });
+  </script>
 {% endblock %}

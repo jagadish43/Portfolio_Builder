@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bento Dashboard Portfolio</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131c2e;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --border-color: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bento-container {
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: minmax(160px, auto);
+            gap: 1.25rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        /* Bento Grid Placement */
+        .card-hero {
+            grid-column: span 3;
+            grid-row: span 2;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--accent-glow) 100%);
+        }
+
+        .card-links {
+            grid-column: span 1;
+            grid-row: span 2;
+        }
+
+        .card-skills {
+            grid-column: span 2;
+            grid-row: span 1;
+        }
+
+        .card-stats {
+            grid-column: span 2;
+            grid-row: span 1;
+        }
+
+        .card-project {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
+        /* Content Styling */
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .tag {
+            background-color: var(--bg-color);
+            color: var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+        }
+
+        .link-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .link-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            background-color: var(--bg-color);
+            border-radius: 10px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+        }
+
+        .link-item:hover {
+            background-color: var(--accent-glow);
+            border-color: var(--accent);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            height: 100%;
+            align-items: center;
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .project-image-placeholder {
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            height: 160px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .bento-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .card-hero, .card-links, .card-skills, .card-stats, .card-project {
+                grid-column: span 2;
+                grid-row: auto;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .bento-container {
+                grid-template-columns: 1fr;
+            }
+            .card-hero, .card-links, .card-skills, .card-stats, .card-project {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bento-container">
+        <!-- Hero Card -->
+        <div class="card card-hero">
+            <div>
+                <h1>Hi, I'm John Doe</h1>
+                <p>A Full Stack Developer focusing on building reliable backend APIs and clean, responsive user interfaces.</p>
+            </div>
+            <div class="tag-container" style="margin-top: 1.5rem;">
+                <span class="tag">Available for Freelance</span>
+                <span class="tag">Remote Work</span>
+            </div>
+        </div>
+
+        <!-- Links Card -->
+        <div class="card card-links">
+            <h2>Connect</h2>
+            <div class="link-list">
+                <a href="#" class="link-item">GitHub</a>
+                <a href="#" class="link-item">LinkedIn</a>
+                <a href="#" class="link-item">Resume</a>
+            </div>
+        </div>
+
+        <!-- Tech Stack Card -->
+        <div class="card card-skills">
+            <h2>Core Skills</h2>
+            <div class="tag-container">
+                <span class="tag">Python</span>
+                <span class="tag">Django</span>
+                <span class="tag">FastAPI</span>
+                <span class="tag">JavaScript</span>
+                <span class="tag">React</span>
+                <span class="tag">PostgreSQL</span>
+            </div>
+        </div>
+
+        <!-- Metric/Stats Card -->
+        <div class="card card-stats">
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-number">15+</div>
+                    <p>Projects Done</p>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">3+</div>
+                    <p>Years Coding</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Card 1 -->
+        <div class="card card-project">
+            <div>
+                <div class="project-image-placeholder">Project Screenshot</div>
+                <h2>E-Commerce Framework</h2>
+                <p>A performant backend engine built with robust caching, token authentication, and complex relational schema handling.</p>
+            </div>
+        </div>
+
+        <!-- Project Card 2 -->
+        <div class="card card-project">
+            <div>
+                <div class="project-image-placeholder">Project Screenshot</div>
+                <h2>Automation Dashboard</h2>
+                <p>A sleek, interactive interface managing and monitoring background pipeline scripts and API metrics in real-time.</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
