@@ -10,16 +10,18 @@
           <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Dashboard</p>
           <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900">Welcome, {{ current_user.email }}</h1>
           <p class="mt-3 text-base text-slate-600">
-            Create and manage portfolios from one place. Each published portfolio gets a preview link.
+            Manage your portfolio from one place. Each published portfolio gets a preview link.
           </p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <a
-            class="rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"
-            href="/portfolios/new"
-          >
-            New portfolio
-          </a>
+          {% if can_create_portfolio %}
+            <a
+              class="rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"
+              href="/portfolios/new"
+            >
+              Create portfolio
+            </a>
+          {% endif %}
           <form method="post" action="/logout">
             <button
               class="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
@@ -34,8 +36,8 @@
 
     <section class="mt-8 rounded-3xl border border-white/70 bg-white/85 p-8 shadow-card backdrop-blur">
       <div class="flex items-center justify-between gap-4">
-        <h2 class="text-xl font-bold text-slate-900">Your Portfolios</h2>
-        <span class="text-sm font-medium text-slate-500">{{ portfolios|length }} total</span>
+        <h2 class="text-xl font-bold text-slate-900">Your Portfolio</h2>
+        <span class="text-sm font-medium text-slate-500">{{ portfolios|length }} saved</span>
       </div>
 
       <div class="mt-6 space-y-4">
@@ -58,13 +60,25 @@
                   Projects:
                   <span class="font-semibold text-slate-800">{{ portfolio.project_count }}</span>
                 </p>
+                <p class="mt-1 text-sm text-slate-600">
+                  Theme:
+                  <span class="font-semibold text-slate-800">{{ portfolio.theme_slug }}</span>
+                </p>
               </div>
-              <a
-                class="shrink-0 rounded-full border border-accent/20 bg-white px-4 py-2 text-sm font-semibold text-accent transition hover:border-accent hover:bg-accentSoft"
-                href="{{ portfolio.preview_url }}"
-              >
-                Preview
-              </a>
+              <div class="flex shrink-0 flex-wrap gap-2">
+                <a
+                  class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+                  href="{{ portfolio.edit_url }}"
+                >
+                  Edit
+                </a>
+                <a
+                  class="rounded-full border border-accent/20 bg-white px-4 py-2 text-sm font-semibold text-accent transition hover:border-accent hover:bg-accentSoft"
+                  href="{{ portfolio.preview_url }}"
+                >
+                  Preview
+                </a>
+              </div>
             </div>
             <p class="mt-3 break-all text-xs text-slate-500">{{ portfolio.preview_url }}</p>
           </article>
@@ -72,8 +86,8 @@
           <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-6">
             <p class="text-sm leading-7 text-slate-600">
               You have not created a portfolio yet. Use the
-              <span class="font-semibold text-slate-800">New portfolio</span>
-              button to add one manually.
+              <span class="font-semibold text-slate-800">Create portfolio</span>
+              button to add it.
             </p>
           </div>
         {% endfor %}

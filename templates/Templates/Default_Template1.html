@@ -1,271 +1,705 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bento Dashboard Portfolio</title>
-    <style>
-        :root {
-            --bg-color: #0b0f19;
-            --card-bg: #131c2e;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.15);
-            --border-color: #1e293b;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ portfolio.full_name }} | Portfolio</title>
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      scroll-behavior:smooth;
+      font-family:Arial, Helvetica, sans-serif;
+    }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 2rem;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    :root{
+      --bg:#f5f5f5;
+      --card:#ffffff;
+      --text:#111111;
+      --muted:#666666;
+      --border:#dddddd;
+    }
 
-        .bento-container {
-            max-width: 1200px;
-            width: 100%;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-auto-rows: minmax(160px, auto);
-            gap: 1.25rem;
-        }
+    body{
+      background:var(--bg);
+      color:var(--text);
+    }
 
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
+    body[data-bg-theme="ivory"]{
+      --bg:#f5f5f5;
+    }
 
-        .card:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent);
-        }
+    body[data-bg-theme="mint"]{
+      --bg:#eef8f1;
+    }
 
-        /* Bento Grid Placement */
-        .card-hero {
-            grid-column: span 3;
-            grid-row: span 2;
-            justify-content: center;
-            background: linear-gradient(135deg, var(--card-bg) 0%, var(--accent-glow) 100%);
-        }
+    body[data-bg-theme="sky"]{
+      --bg:#eef6ff;
+    }
 
-        .card-links {
-            grid-column: span 1;
-            grid-row: span 2;
-        }
+    body[data-bg-theme="peach"]{
+      --bg:#fff3eb;
+    }
 
-        .card-skills {
-            grid-column: span 2;
-            grid-row: span 1;
-        }
+    body[data-bg-theme="slate"]{
+      --bg:#edf1f5;
+    }
 
-        .card-stats {
-            grid-column: span 2;
-            grid-row: span 1;
-        }
+    body.dark{
+      --bg:#050505;
+      --card:#111111;
+      --text:#ffffff;
+      --muted:#9b9b9b;
+      --border:#2b2b2b;
+    }
 
-        .card-project {
-            grid-column: span 2;
-            grid-row: span 2;
-        }
+    nav{
+      width:100%;
+      position:fixed;
+      top:0;
+      left:0;
+      z-index:1000;
+      backdrop-filter:blur(10px);
+      background:rgba(255,255,255,0.82);
+      border-bottom:1px solid var(--border);
+    }
 
-        /* Content Styling */
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            font-weight: 800;
-        }
+    .nav-container{
+      width:90%;
+      max-width:1200px;
+      margin:auto;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:18px 0;
+    }
 
-        h2 {
-            font-size: 1.25rem;
-            color: var(--text-main);
-            margin-bottom: 1rem;
-        }
+    .logo{
+      width:45px;
+      height:45px;
+      border-radius:50%;
+      background:#111111;
+      color:#ffffff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:bold;
+    }
 
-        p {
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
+    .nav-links{
+      display:flex;
+      gap:18px;
+    }
 
-        .tag-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: auto;
-        }
+    .nav-links a{
+      text-decoration:none;
+      color:var(--text);
+      background:var(--card);
+      padding:10px 18px;
+      border-radius:12px;
+      font-size:14px;
+      border:1px solid var(--border);
+      transition:0.3s;
+    }
 
-        .tag {
-            background-color: var(--bg-color);
-            color: var(--accent);
-            padding: 0.4rem 0.8rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            border: 1px solid var(--border-color);
-        }
+    .nav-links a:hover{
+      transform:translateY(-2px);
+    }
 
-        .link-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            height: 100%;
-            justify-content: center;
-        }
+    .theme-btn{
+      padding:10px 18px;
+      border:none;
+      border-radius:12px;
+      background:#111111;
+      color:#ffffff;
+      cursor:pointer;
+    }
 
-        .link-item {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem;
-            background-color: var(--bg-color);
-            border-radius: 10px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-weight: 500;
-            border: 1px solid var(--border-color);
-        }
+    section{
+      width:90%;
+      max-width:1200px;
+      margin:auto;
+      padding:120px 0 80px;
+    }
 
-        .link-item:hover {
-            background-color: var(--accent-glow);
-            border-color: var(--accent);
-        }
+    .hero{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:50px;
+    }
 
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            height: 100%;
-            align-items: center;
-        }
+    .hero-text h1{
+      font-size:65px;
+      margin:15px 0;
+      line-height:1.1;
+    }
 
-        .stat-box {
-            text-align: center;
-        }
+    .hero-text p{
+      color:var(--muted);
+      line-height:1.7;
+      max-width:500px;
+    }
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--accent);
-        }
+    .btn{
+      display:inline-block;
+      margin-top:30px;
+      padding:14px 25px;
+      border-radius:12px;
+      background:var(--card);
+      color:var(--text);
+      text-decoration:none;
+      border:1px solid var(--border);
+    }
 
-        .project-image-placeholder {
-            background-color: var(--bg-color);
-            border-radius: 8px;
-            height: 160px;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px dashed var(--border-color);
-            color: var(--text-muted);
-        }
+    .btn-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+      margin-top:30px;
+    }
 
-        /* Responsive Layout */
-        @media (max-width: 900px) {
-            .bento-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .card-hero, .card-links, .card-skills, .card-stats, .card-project {
-                grid-column: span 2;
-                grid-row: auto;
-            }
-        }
+    .btn-row .btn{
+      margin-top:0;
+    }
 
-        @media (max-width: 600px) {
-            .bento-container {
-                grid-template-columns: 1fr;
-            }
-            .card-hero, .card-links, .card-skills, .card-stats, .card-project {
-                grid-column: span 1;
-            }
-        }
-    </style>
+    .btn-secondary{
+      background:transparent;
+    }
+
+    .hero-image img{
+      width:350px;
+      border-radius:20px;
+      filter:grayscale(100%);
+    }
+
+    .title{
+      text-align:center;
+      margin-bottom:50px;
+    }
+
+    .title h2{
+      font-size:42px;
+      margin-bottom:10px;
+    }
+
+    .title p{
+      color:var(--muted);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+      gap:25px;
+    }
+
+    .card{
+      background:var(--card);
+      padding:25px;
+      border-radius:22px;
+      border:1px solid var(--border);
+      transition:0.3s;
+    }
+
+    .card:hover{
+      transform:translateY(-5px);
+    }
+
+    .card h3{
+      margin-bottom:15px;
+    }
+
+    .card p{
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    .skill-tags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:20px;
+    }
+
+    .skill-tags span{
+      padding:8px 14px;
+      background:#f0f0f0;
+      border-radius:10px;
+      font-size:13px;
+    }
+
+    .contact-box{
+      background:var(--card);
+      padding:50px;
+      border-radius:25px;
+      border:1px solid var(--border);
+    }
+
+    .contact-box p{
+      margin:20px 0;
+      color:var(--muted);
+    }
+
+    .contact-layout{
+      display:grid;
+      grid-template-columns:1fr 1.05fr;
+      gap:28px;
+      align-items:stretch;
+    }
+
+    .contact-panel{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:25px;
+      padding:28px;
+    }
+
+    .contact-list{
+      display:grid;
+      gap:14px;
+      margin-top:24px;
+    }
+
+    .contact-card{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      padding:16px 18px;
+      border-radius:18px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,0.02);
+      text-decoration:none;
+      color:var(--text);
+      transition:0.3s;
+    }
+
+    .contact-card:hover{
+      transform:translateY(-3px);
+    }
+
+    .icon-badge{
+      width:46px;
+      height:46px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#f3f3f3;
+      border:1px solid var(--border);
+      flex-shrink:0;
+    }
+
+    body.dark nav{
+      background:rgba(0,0,0,0.6);
+    }
+
+    body.dark .logo,
+    body.dark .theme-btn{
+      background:#2b2b2b;
+    }
+
+    body.dark .skill-tags span{
+      background:#1f1f1f;
+    }
+
+    body.dark .icon-badge{
+      background:#1b1b1b;
+    }
+
+    .icon-badge svg{
+      width:20px;
+      height:20px;
+      fill:currentColor;
+    }
+
+    .contact-copy{
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+      min-width:0;
+    }
+
+    .contact-copy strong{
+      font-size:15px;
+    }
+
+    .contact-copy span{
+      color:var(--muted);
+      font-size:14px;
+      overflow-wrap:anywhere;
+    }
+
+    .contact-form{
+      display:flex;
+      flex-direction:column;
+      gap:22px;
+    }
+
+    .contact-form h3{
+      font-size:20px;
+    }
+
+    .field{
+      width:100%;
+      border-radius:18px;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text);
+      padding:18px 16px;
+      font-size:16px;
+      outline:none;
+    }
+
+    .field::placeholder{
+      color:var(--muted);
+    }
+
+    textarea.field{
+      min-height:180px;
+      resize:vertical;
+    }
+
+    .whatsapp-btn{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      width:100%;
+      border:none;
+      border-radius:999px;
+      padding:18px 24px;
+      font-size:16px;
+      font-weight:700;
+      color:#ffffff;
+      background:linear-gradient(135deg,#ff9800,#ff6a00);
+      cursor:pointer;
+    }
+
+    .whatsapp-btn:disabled{
+      opacity:0.55;
+      cursor:not-allowed;
+    }
+
+    .whatsapp-btn svg{
+      width:20px;
+      height:20px;
+      fill:currentColor;
+    }
+
+    .contact-note{
+      color:var(--muted);
+      font-size:14px;
+      margin-top:12px;
+    }
+
+    footer{
+      text-align:center;
+      padding:30px;
+      color:var(--muted);
+      border-top:1px solid var(--border);
+    }
+
+    @media(max-width:900px){
+
+      .hero{
+        flex-direction:column;
+        text-align:center;
+      }
+
+      .hero-text h1{
+        font-size:45px;
+      }
+
+      .nav-links{
+        display:none;
+      }
+
+      .contact-layout{
+        grid-template-columns:1fr;
+      }
+    }
+
+  </style>
 </head>
-<body>
 
-    <div class="bento-container">
-        <!-- Hero Card -->
-        <div class="card card-hero">
-            <div>
-                <h1>Hi, I'm John Doe</h1>
-                <p>A Full Stack Developer focusing on building reliable backend APIs and clean, responsive user interfaces.</p>
-            </div>
-            <div class="tag-container" style="margin-top: 1.5rem;">
-                <span class="tag">Available for Freelance</span>
-                <span class="tag">Remote Work</span>
-            </div>
-        </div>
+<body data-bg-theme="{{ sections.background_theme or 'ivory' }}">
 
-        <!-- Links Card -->
-        <div class="card card-links">
-            <h2>Connect</h2>
-            <div class="link-list">
-                <a href="#" class="link-item">GitHub</a>
-                <a href="#" class="link-item">LinkedIn</a>
-                <a href="#" class="link-item">Resume</a>
-            </div>
-        </div>
+  <nav>
+    <div class="nav-container">
 
-        <!-- Tech Stack Card -->
-        <div class="card card-skills">
-            <h2>Core Skills</h2>
-            <div class="tag-container">
-                <span class="tag">Python</span>
-                <span class="tag">Django</span>
-                <span class="tag">FastAPI</span>
-                <span class="tag">JavaScript</span>
-                <span class="tag">React</span>
-                <span class="tag">PostgreSQL</span>
-            </div>
-        </div>
+      <div class="logo">{{ (portfolio.full_name[:1] if portfolio.full_name else "P") | upper }}</div>
 
-        <!-- Metric/Stats Card -->
-        <div class="card card-stats">
-            <div class="stat-grid">
-                <div class="stat-box">
-                    <div class="stat-number">15+</div>
-                    <p>Projects Done</p>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number">3+</div>
-                    <p>Years Coding</p>
-                </div>
-            </div>
-        </div>
+      <div class="nav-links">
+        <a href="#home">Home</a>
+        <a href="#projects">Projects</a>
+        {% if sections.experience and experiences %}
+        <a href="#experience">Experience</a>
+        {% endif %}
+        <a href="#skills">Skills</a>
+        <a href="#education">Education</a>
+        {% if sections.contact and contact_items %}
+        <a href="#contact">Contact</a>
+        {% endif %}
+      </div>
 
-        <!-- Project Card 1 -->
-        <div class="card card-project">
-            <div>
-                <div class="project-image-placeholder">Project Screenshot</div>
-                <h2>E-Commerce Framework</h2>
-                <p>A performant backend engine built with robust caching, token authentication, and complex relational schema handling.</p>
-            </div>
-        </div>
+      <button class="theme-btn" onclick="toggleTheme()">
+        Theme
+      </button>
 
-        <!-- Project Card 2 -->
-        <div class="card card-project">
-            <div>
-                <div class="project-image-placeholder">Project Screenshot</div>
-                <h2>Automation Dashboard</h2>
-                <p>A sleek, interactive interface managing and monitoring background pipeline scripts and API metrics in real-time.</p>
-            </div>
-        </div>
     </div>
+  </nav>
+
+  <!-- HOME -->
+
+  <section class="hero" id="home">
+
+    <div class="hero-text">
+      <h4>Hello, I'm</h4>
+
+      <h1>
+        {{ portfolio.full_name }}
+      </h1>
+
+      <p>
+        {{ portfolio.title_tagline }}
+      </p>
+
+      {% if portfolio.bio %}
+      <p style="margin-top:18px;">
+        {{ portfolio.bio }}
+      </p>
+      {% endif %}
+
+      <div class="btn-row">
+        {% if sections.contact and contact_items %}
+        <a href="#contact" class="btn">Contact</a>
+        {% endif %}
+        {% if resume_url %}
+        <a href="{{ resume_url }}" class="btn btn-secondary" target="_blank" rel="noreferrer" download>Download Resume</a>
+        {% endif %}
+      </div>
+    </div>
+
+  </section>
+
+  <!-- PROJECTS -->
+
+  <section id="projects">
+
+    <div class="title">
+      <h2>Projects</h2>
+      <p>Selected works and featured projects</p>
+    </div>
+
+    <div class="grid">
+      {% for project in projects %}
+      <div class="card">
+        <h3>{{ project.title }}</h3>
+        <p>{{ project.description }}</p>
+        {% if project.live_url %}
+        <a href="{{ project.live_url }}" class="btn" style="margin-top:18px;">View Project</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+  </section>
+
+  <!-- EDUCATION -->
+
+  <section id="education">
+
+    <div class="title">
+      <h2>Education</h2>
+      <p>Academic background and qualifications</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <p>{{ education_text }}</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- EXPERIENCE -->
+
+  {% if sections.experience and experiences %}
+  <section id="experience">
+
+    <div class="title">
+      <h2>Experience</h2>
+      <p>Professional journey and work experience</p>
+    </div>
+
+    <div class="grid">
+      {% for experience in experiences %}
+      <div class="card">
+        <h3>{{ experience.role }}</h3>
+        <p><strong>{{ experience.company }}</strong>{% if experience.duration %} · {{ experience.duration }}{% endif %}</p>
+        <p style="margin-top:12px;">{{ experience.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+  </section>
+  {% endif %}
+
+  <!-- SKILLS -->
+
+  <section id="skills">
+
+    <div class="title">
+      <h2>Skills</h2>
+      <p>Crafting seamless UI/UX and clean code</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Skills</h3>
+
+        <div class="skill-tags">
+          {% for skill in skills %}
+          <span>{{ skill }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% if certificates %}
+      <div class="card">
+        <h3>Certificates</h3>
+        {% for certificate in certificates %}
+        <p>
+          <strong>{{ certificate.name }}</strong> by {{ certificate.issuer }}{% if certificate.year %} ({{ certificate.year }}){% endif %}
+          {% if certificate.url %}
+          <br><a href="{{ certificate.url }}" class="btn" style="margin-top:12px;">View Certificate</a>
+          {% endif %}
+        </p>
+        {% if not loop.last %}
+        <div style="height:16px;"></div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+  </section>
+
+  <!-- CONTACT -->
+
+  {% if sections.contact and (contact_items or resume_url) %}
+  <section id="contact">
+
+    <div class="contact-layout">
+      <div class="contact-panel">
+        <h2>Contact</h2>
+        <p>Reach out through your preferred channel or download the latest resume.</p>
+
+        <div class="contact-list">
+          {% for label, value in contact_items %}
+            {% if value %}
+              {% if label == "Email" %}
+              <a href="mailto:{{ value }}" class="contact-card">
+              {% elif label == "Phone Number" %}
+              <a href="tel:{{ value }}" class="contact-card">
+              {% else %}
+              <a href="{{ value }}" class="contact-card" target="_blank" rel="noreferrer">
+              {% endif %}
+                <span class="icon-badge" aria-hidden="true">
+                  {% if label == "GitHub" %}
+                  <svg viewBox="0 0 24 24"><path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.23c-3.34.73-4.04-1.41-4.04-1.41-.55-1.38-1.34-1.75-1.34-1.75-1.09-.74.08-.72.08-.72 1.2.08 1.84 1.25 1.84 1.25 1.08 1.84 2.82 1.31 3.5 1 .11-.79.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.96 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.29-1.23 3.29-1.23.66 1.65.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.63-2.8 5.65-5.48 5.95.43.38.81 1.1.81 2.23v3.31c0 .32.22.69.83.57A12 12 0 0 0 12 .5Z"/></svg>
+                  {% elif label == "LinkedIn" %}
+                  <svg viewBox="0 0 24 24"><path d="M4.98 3.5A2.48 2.48 0 1 0 5 8.46a2.48 2.48 0 0 0-.02-4.96ZM3 9h4v12H3Zm7 0h3.83v1.64h.05c.53-1 1.84-2.05 3.79-2.05 4.05 0 4.8 2.66 4.8 6.12V21h-4v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.15 1.45-2.15 2.94V21h-4Z"/></svg>
+                  {% elif label == "LeetCode" %}
+                  <svg viewBox="0 0 24 24"><path d="M14.4 3.2a1 1 0 0 1 1.41 0l4.98 4.98a1 1 0 1 1-1.41 1.41l-4.28-4.27-7.86 7.85a2.5 2.5 0 0 0 0 3.54l2.1 2.09a2.5 2.5 0 0 0 3.53 0l7.87-7.86a1 1 0 1 1 1.41 1.42l-7.86 7.85a4.5 4.5 0 0 1-6.36 0l-2.1-2.09a4.5 4.5 0 0 1 0-6.37L14.4 3.2Zm-4.14 8.54h6.2a1 1 0 1 1 0 2h-6.2a1 1 0 0 1 0-2Z"/></svg>
+                  {% elif label == "Email" %}
+                  <svg viewBox="0 0 24 24"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13Zm2 .57V18.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5V6.07l-6.4 5.12a1 1 0 0 1-1.24 0L5 6.07Zm1.64-1.07L12 9.28 17.36 5H6.64Z"/></svg>
+                  {% elif label == "Phone Number" %}
+                  <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.43 15.43 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1-.24c1.12.37 2.32.56 3.59.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.4 21 3 13.6 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.27.19 2.47.56 3.59a1 1 0 0 1-.24 1l-2.2 2.2Z"/></svg>
+                  {% endif %}
+                </span>
+                <span class="contact-copy">
+                  <strong>{{ label }}</strong>
+                  <span>{{ value }}</span>
+                </span>
+              </a>
+            {% endif %}
+          {% endfor %}
+
+          {% if resume_url %}
+          <a href="{{ resume_url }}" class="contact-card" target="_blank" rel="noreferrer" download>
+            <span class="icon-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V8h4.5L13 3.5ZM8 12a1 1 0 0 0 0 2h8a1 1 0 1 0 0-2H8Zm0 4a1 1 0 0 0 0 2h5a1 1 0 1 0 0-2H8Z"/></svg>
+            </span>
+            <span class="contact-copy">
+              <strong>Resume</strong>
+              <span>Download latest resume</span>
+            </span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="contact-box">
+        <form class="contact-form" id="whatsapp-contact-form">
+          <h3>Send me a message</h3>
+          <input class="field" type="email" id="wa-email" placeholder="Your Email" />
+          <input class="field" type="text" id="wa-phone" placeholder="Your Contact Number" />
+          <textarea class="field" id="wa-message" placeholder="Your Message"></textarea>
+          <button class="whatsapp-btn" type="submit" {% if not contact_data.get("phone_number") %}disabled{% endif %}>
+            <svg viewBox="0 0 24 24"><path d="m21.7 2.3-19 7.5a1 1 0 0 0 .07 1.88l5.6 1.8 1.8 5.6a1 1 0 0 0 1.88.07l7.5-19a1 1 0 0 0-1.3-1.3ZM9.2 12.8l8.85-8.85-6.58 10.45a1 1 0 0 0-.12.3l-.95 3-1.2-3.74ZM7.76 12.2l-3.73-1.2 13.74-5.42Z"/></svg>
+            Send via WhatsApp
+          </button>
+          <p class="contact-note">
+            {% if contact_data.get("phone_number") %}
+            Messages from this form open directly in WhatsApp.
+            {% else %}
+            Add a phone number in the portfolio form to enable WhatsApp messaging here.
+            {% endif %}
+          </p>
+        </form>
+      </div>
+    </div>
+
+  </section>
+  {% endif %}
+
+  <footer>
+    © 2026 {{ portfolio.full_name }}. All Rights Reserved.
+  </footer>
+
+  <script>
+    const whatsappForm = document.getElementById("whatsapp-contact-form");
+    if (whatsappForm) {
+      whatsappForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const ownerPhone = {{ (contact_data.get("phone_number", "") or "") | tojson }};
+        if (!ownerPhone) return;
+
+        const visitorEmail = document.getElementById("wa-email")?.value.trim() || "";
+        const visitorPhone = document.getElementById("wa-phone")?.value.trim() || "";
+        const visitorMessage = document.getElementById("wa-message")?.value.trim() || "";
+        const body = [
+          "Hello {{ portfolio.full_name }},",
+          "",
+          visitorEmail ? `Email: ${visitorEmail}` : "",
+          visitorPhone ? `Contact Number: ${visitorPhone}` : "",
+          "",
+          visitorMessage || "I'd like to connect with you.",
+        ].filter(Boolean).join("\n");
+
+        const phone = ownerPhone.replace(/[^+\d]/g, "").replace(/^\+/, "");
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(body)}`, "_blank", "noopener");
+      });
+    }
+
+    function toggleTheme(){
+      document.body.classList.toggle("dark");
+    }
+
+  </script>
 
 </body>
 </html>

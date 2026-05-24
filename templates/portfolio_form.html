@@ -1,16 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}New Portfolio | Portfolio Builder{% endblock %}
+{% block title %}{% if form_mode == "edit" %}Edit Portfolio{% else %}New Portfolio{% endif %} | Portfolio Builder{% endblock %}
 
 {% block content %}
   {% set sections = form_data.sections %}
   {% set step = form_data.step %}
+  {% set is_edit = form_mode == "edit" %}
   <main class="mx-auto min-h-screen w-full max-w-6xl px-6 py-10 lg:px-10">
     <section class="rounded-3xl border border-white/70 bg-white/90 p-8 shadow-card backdrop-blur">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Portfolio Setup</p>
-          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900">Create a portfolio</h1>
+          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900">{% if is_edit %}Edit your portfolio{% else %}Create a portfolio{% endif %}</h1>
           {% if step == "customize" %}
             <p class="mt-3 max-w-3xl text-base text-slate-600">
               First choose a theme and decide which optional sections should appear. After that, you will enter only the relevant details.
@@ -25,7 +26,19 @@
       </div>
 
       <div class="mt-6 flex items-center gap-3 text-sm font-semibold">
-        <span class="rounded-full px-4 py-2 {% if step == 'customize' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">1. Customize</span>
+        {% if step == "details" %}
+          <button
+            class="rounded-full px-4 py-2 bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+            type="submit"
+            form="portfolio-details-form"
+            name="nav"
+            value="customize"
+          >
+            1. Customize
+          </button>
+        {% else %}
+          <span class="rounded-full px-4 py-2 bg-slate-900 text-white">1. Customize</span>
+        {% endif %}
         <span class="rounded-full px-4 py-2 {% if step == 'details' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">2. Details</span>
       </div>
 
@@ -36,165 +49,149 @@
       {% endif %}
 
       {% if step == "customize" %}
-        <form class="mt-8 space-y-10" method="post" action="/portfolios/new">
+        <form class="mt-8 space-y-10" method="post" action="{{ form_action }}">
           <input type="hidden" name="step" value="customize" />
+          <input type="hidden" name="subdomain" value="{{ form_data.subdomain }}" />
+          <input type="hidden" name="full_name" value="{{ form_data.full_name }}" />
+          <input type="hidden" name="title_tagline" value="{{ form_data.title_tagline }}" />
+          <input type="hidden" name="bio" value="{{ form_data.bio }}" />
+          <input type="hidden" name="education_text" value="{{ form_data.education_text }}" />
+          <input type="hidden" name="skills_text" value="{{ form_data.skills_text }}" />
+          <input type="hidden" name="github_url" value="{{ form_data.github_url }}" />
+          <input type="hidden" name="leetcode_url" value="{{ form_data.leetcode_url }}" />
+          <input type="hidden" name="linkedin_url" value="{{ form_data.linkedin_url }}" />
+          <input type="hidden" name="contact_email" value="{{ form_data.contact_email }}" />
+          <input type="hidden" name="phone_number" value="{{ form_data.phone_number }}" />
+          <input type="hidden" name="resume_url" value="{{ form_data.resume_url }}" />
+          <input type="hidden" name="theme_slug" value="default_template1" />
+          {% if form_data.is_published %}
+            <input type="hidden" name="is_published" value="on" />
+          {% endif %}
+          <input type="hidden" name="background_theme" value="{{ sections.background_theme }}" />
+          {% for project in form_data.projects %}
+            <input type="hidden" name="project_title" value="{{ project.title }}" />
+            <input type="hidden" name="project_description" value="{{ project.description }}" />
+            <input type="hidden" name="project_live_url" value="{{ project.live_url }}" />
+          {% endfor %}
+          {% for experience in form_data.experiences %}
+            <input type="hidden" name="experience_role" value="{{ experience.role }}" />
+            <input type="hidden" name="experience_company" value="{{ experience.company }}" />
+            <input type="hidden" name="experience_duration" value="{{ experience.duration }}" />
+            <input type="hidden" name="experience_description" value="{{ experience.description }}" />
+          {% endfor %}
+          {% for certificate in form_data.certificates %}
+            <input type="hidden" name="certificate_name" value="{{ certificate.name }}" />
+            <input type="hidden" name="certificate_issuer" value="{{ certificate.issuer }}" />
+            <input type="hidden" name="certificate_year" value="{{ certificate.year }}" />
+            <input type="hidden" name="certificate_url" value="{{ certificate.url }}" />
+          {% endfor %}
 
           <section class="space-y-5">
             <div>
               <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Theme</p>
-              <h2 class="mt-2 text-2xl font-bold text-slate-900">Choose a visual template</h2>
-              <p class="mt-2 text-sm text-slate-500">Each option includes a mini preview so users can understand the layout before continuing.</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-900">Default template</h2>
+              <p class="mt-2 text-sm text-slate-500">`Default_Template1` is the active portfolio layout for now. Additional templates can be added back later.</p>
             </div>
-            <div class="grid gap-5 lg:grid-cols-3">
-              {% for theme in theme_options %}
-                <label class="block cursor-pointer">
-                  <input class="peer sr-only" type="radio" name="theme_slug" value="{{ theme.slug }}" {% if form_data.theme_slug == theme.slug %}checked{% endif %} />
-                  <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
-                    <div class="mb-4 flex items-center justify-between">
-                      <div>
-                        <h3 class="text-lg font-bold text-slate-900">{{ theme.label }}</h3>
-                        <p class="mt-1 text-xs leading-6 text-slate-500">{{ theme.description }}</p>
+            <div class="max-w-2xl">
+              <article class="rounded-3xl border border-accent/20 bg-gradient-to-br from-white via-amber-50 to-emerald-50 p-4 ring-2 ring-accent/10 shadow-sm">
+                <div class="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 class="text-lg font-bold text-slate-900">Default_Template1</h3>
+                    <p class="mt-1 text-xs leading-6 text-slate-500">Left sidebar portfolio with scrolling content and editorial sections.</p>
+                  </div>
+                  <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Active</span>
+                </div>
+                <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-[linear-gradient(135deg,#fffdf7_0%,#f7fbf9_100%)]">
+                  <div class="grid grid-cols-[0.75fr_1.25fr]">
+                    <div class="border-r border-neutral-200 bg-white p-3">
+                      <div class="h-5 w-20 rounded-full bg-neutral-900"></div>
+                      <div class="mt-2 h-2 w-full rounded-full bg-neutral-200"></div>
+                      <div class="mt-1 h-2 w-4/5 rounded-full bg-neutral-200"></div>
+                      <div class="mt-4 space-y-2">
+                        <div class="h-2 w-14 rounded-full bg-emerald-500"></div>
+                        <div class="h-2 w-12 rounded-full bg-amber-300"></div>
+                        <div class="h-2 w-16 rounded-full bg-neutral-300"></div>
                       </div>
-                      <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Preview</span>
+                      <div class="mt-8 h-2 w-24 rounded-full bg-neutral-300"></div>
                     </div>
-                    {% if theme.slug == "default" %}
-                      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-3">
-                        <div class="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-                          <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
-                            <div class="h-5 w-24 rounded-full bg-teal-100"></div>
-                            <div class="mt-3 h-5 w-3/4 rounded-full bg-slate-800"></div>
-                            <div class="mt-2 h-3 w-1/2 rounded-full bg-slate-300"></div>
-                            <div class="mt-4 space-y-2">
-                              <div class="h-2 w-full rounded-full bg-slate-200"></div>
-                              <div class="h-2 w-5/6 rounded-full bg-slate-200"></div>
-                              <div class="h-2 w-2/3 rounded-full bg-slate-200"></div>
-                            </div>
+                    <div class="bg-[linear-gradient(180deg,#fbfbfb_0%,#f5f8f7_100%)] p-3">
+                      <div class="h-3 w-24 rounded-full bg-neutral-300"></div>
+                      <div class="mt-3 space-y-2">
+                        <div class="h-2 w-full rounded-full bg-neutral-200"></div>
+                        <div class="h-2 w-5/6 rounded-full bg-neutral-200"></div>
+                        <div class="h-2 w-4/6 rounded-full bg-neutral-200"></div>
+                      </div>
+                      <div class="mt-5 h-3 w-28 rounded-full bg-neutral-300"></div>
+                      <div class="mt-3 space-y-3">
+                        <div class="rounded-xl border border-dashed border-neutral-300 bg-white/90 p-3 shadow-sm">
+                          <div class="flex items-center justify-between">
+                            <div class="h-3 w-24 rounded-full bg-neutral-800"></div>
+                            <div class="h-2 w-12 rounded-full bg-emerald-500"></div>
                           </div>
-                          <div class="space-y-3">
-                            <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
-                              <div class="h-4 w-16 rounded-full bg-slate-800"></div>
-                              <div class="mt-3 flex gap-2">
-                                <div class="h-6 w-12 rounded-full bg-slate-900"></div>
-                                <div class="h-6 w-12 rounded-full bg-slate-900"></div>
-                              </div>
-                            </div>
-                            <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
-                              <div class="h-4 w-20 rounded-full bg-slate-800"></div>
-                              <div class="mt-3 space-y-2">
-                                <div class="h-10 rounded-xl bg-slate-100"></div>
-                                <div class="h-10 rounded-xl bg-slate-100"></div>
-                              </div>
-                            </div>
-                          </div>
+                          <div class="mt-2 h-2 w-full rounded-full bg-neutral-200"></div>
                         </div>
-                        <div class="mt-3 grid grid-cols-2 gap-3">
-                          <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
-                            <div class="h-4 w-20 rounded-full bg-slate-800"></div>
-                            <div class="mt-3 h-12 rounded-xl bg-slate-100"></div>
+                        <div class="rounded-xl border border-dashed border-neutral-300 bg-white/90 p-3 shadow-sm">
+                          <div class="flex items-center justify-between">
+                            <div class="h-3 w-28 rounded-full bg-neutral-800"></div>
+                            <div class="h-2 w-12 rounded-full bg-amber-400"></div>
                           </div>
-                          <div class="rounded-2xl border border-white/80 bg-white/90 p-3">
-                            <div class="h-4 w-24 rounded-full bg-slate-800"></div>
-                            <div class="mt-3 h-12 rounded-xl bg-slate-100"></div>
-                          </div>
+                          <div class="mt-2 h-2 w-5/6 rounded-full bg-neutral-200"></div>
                         </div>
                       </div>
-                    {% elif theme.slug == "default_template1" %}
-                      <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50">
-                        <div class="grid grid-cols-[0.75fr_1.25fr]">
-                          <div class="border-r border-neutral-200 bg-white p-3">
-                            <div class="h-5 w-20 rounded-full bg-neutral-900"></div>
-                            <div class="mt-2 h-2 w-full rounded-full bg-neutral-200"></div>
-                            <div class="mt-1 h-2 w-4/5 rounded-full bg-neutral-200"></div>
-                            <div class="mt-4 space-y-2">
-                              <div class="h-2 w-14 rounded-full bg-emerald-500"></div>
-                              <div class="h-2 w-12 rounded-full bg-neutral-300"></div>
-                              <div class="h-2 w-16 rounded-full bg-neutral-300"></div>
-                            </div>
-                            <div class="mt-8 h-2 w-24 rounded-full bg-neutral-300"></div>
-                          </div>
-                          <div class="bg-neutral-50 p-3">
-                            <div class="h-3 w-24 rounded-full bg-neutral-300"></div>
-                            <div class="mt-3 space-y-2">
-                              <div class="h-2 w-full rounded-full bg-neutral-200"></div>
-                              <div class="h-2 w-5/6 rounded-full bg-neutral-200"></div>
-                              <div class="h-2 w-4/6 rounded-full bg-neutral-200"></div>
-                            </div>
-                            <div class="mt-5 h-3 w-28 rounded-full bg-neutral-300"></div>
-                            <div class="mt-3 space-y-3">
-                              <div class="rounded-xl border border-dashed border-neutral-300 bg-white p-3">
-                                <div class="flex items-center justify-between">
-                                  <div class="h-3 w-24 rounded-full bg-neutral-800"></div>
-                                  <div class="h-2 w-12 rounded-full bg-emerald-500"></div>
-                                </div>
-                                <div class="mt-2 h-2 w-full rounded-full bg-neutral-200"></div>
-                              </div>
-                              <div class="rounded-xl border border-dashed border-neutral-300 bg-white p-3">
-                                <div class="flex items-center justify-between">
-                                  <div class="h-3 w-28 rounded-full bg-neutral-800"></div>
-                                  <div class="h-2 w-12 rounded-full bg-emerald-500"></div>
-                                </div>
-                                <div class="mt-2 h-2 w-5/6 rounded-full bg-neutral-200"></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    {% else %}
-                      <div class="overflow-hidden rounded-2xl border border-slate-700 bg-[#0b0f19] p-3">
-                        <div class="grid grid-cols-4 gap-2">
-                          <div class="col-span-3 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
-                            <div class="h-5 w-24 rounded-full bg-white"></div>
-                            <div class="mt-2 h-2 w-5/6 rounded-full bg-slate-500"></div>
-                            <div class="mt-1 h-2 w-3/5 rounded-full bg-slate-500"></div>
-                            <div class="mt-4 flex gap-2">
-                              <div class="h-6 w-16 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
-                              <div class="h-6 w-16 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
-                            </div>
-                          </div>
-                          <div class="col-span-1 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
-                            <div class="h-4 w-12 rounded-full bg-white"></div>
-                            <div class="mt-3 space-y-2">
-                              <div class="h-8 rounded-xl border border-slate-700 bg-[#0b0f19]"></div>
-                              <div class="h-8 rounded-xl border border-slate-700 bg-[#0b0f19]"></div>
-                              <div class="h-8 rounded-xl border border-slate-700 bg-[#0b0f19]"></div>
-                            </div>
-                          </div>
-                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
-                            <div class="h-4 w-20 rounded-full bg-white"></div>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                              <div class="h-5 w-12 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
-                              <div class="h-5 w-12 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
-                              <div class="h-5 w-12 rounded-lg border border-slate-700 bg-[#0b0f19]"></div>
-                            </div>
-                          </div>
-                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
-                            <div class="grid grid-cols-2 gap-2">
-                              <div class="rounded-xl bg-[#0b0f19] p-2">
-                                <div class="h-5 w-10 rounded-full bg-blue-500"></div>
-                                <div class="mt-2 h-2 w-12 rounded-full bg-slate-500"></div>
-                              </div>
-                              <div class="rounded-xl bg-[#0b0f19] p-2">
-                                <div class="h-5 w-10 rounded-full bg-blue-500"></div>
-                                <div class="mt-2 h-2 w-12 rounded-full bg-slate-500"></div>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
-                            <div class="h-16 rounded-xl border border-dashed border-slate-700 bg-[#0b0f19]"></div>
-                            <div class="mt-3 h-3 w-24 rounded-full bg-white"></div>
-                            <div class="mt-2 h-2 w-full rounded-full bg-slate-500"></div>
-                          </div>
-                          <div class="col-span-2 rounded-2xl border border-slate-700 bg-slate-800/70 p-3">
-                            <div class="h-16 rounded-xl border border-dashed border-slate-700 bg-[#0b0f19]"></div>
-                            <div class="mt-3 h-3 w-28 rounded-full bg-white"></div>
-                            <div class="mt-2 h-2 w-5/6 rounded-full bg-slate-500"></div>
-                          </div>
-                        </div>
-                      </div>
-                    {% endif %}
-                  </article>
-                </label>
-              {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="space-y-5">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Background</p>
+              <h2 class="mt-2 text-2xl font-bold text-slate-900">Choose a background palette</h2>
+              <p class="mt-2 text-sm text-slate-500">This controls the default page background for your portfolio.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <label class="block cursor-pointer">
+                <input class="peer sr-only" type="radio" name="background_theme" value="ivory" {% if sections.background_theme == "ivory" %}checked{% endif %} />
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
+                  <div class="h-24 rounded-2xl border border-slate-200 bg-[#f5f5f5]"></div>
+                  <h3 class="mt-3 text-sm font-bold text-slate-900">Ivory</h3>
+                  <p class="mt-1 text-xs text-slate-500">Clean white default</p>
+                </article>
+              </label>
+              <label class="block cursor-pointer">
+                <input class="peer sr-only" type="radio" name="background_theme" value="mint" {% if sections.background_theme == "mint" %}checked{% endif %} />
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
+                  <div class="h-24 rounded-2xl border border-emerald-100 bg-[#eef8f1]"></div>
+                  <h3 class="mt-3 text-sm font-bold text-slate-900">Mint</h3>
+                  <p class="mt-1 text-xs text-slate-500">Soft green tint</p>
+                </article>
+              </label>
+              <label class="block cursor-pointer">
+                <input class="peer sr-only" type="radio" name="background_theme" value="sky" {% if sections.background_theme == "sky" %}checked{% endif %} />
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
+                  <div class="h-24 rounded-2xl border border-sky-100 bg-[#eef6ff]"></div>
+                  <h3 class="mt-3 text-sm font-bold text-slate-900">Sky</h3>
+                  <p class="mt-1 text-xs text-slate-500">Cool blue tint</p>
+                </article>
+              </label>
+              <label class="block cursor-pointer">
+                <input class="peer sr-only" type="radio" name="background_theme" value="peach" {% if sections.background_theme == "peach" %}checked{% endif %} />
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
+                  <div class="h-24 rounded-2xl border border-orange-100 bg-[#fff3eb]"></div>
+                  <h3 class="mt-3 text-sm font-bold text-slate-900">Peach</h3>
+                  <p class="mt-1 text-xs text-slate-500">Warm soft orange</p>
+                </article>
+              </label>
+              <label class="block cursor-pointer">
+                <input class="peer sr-only" type="radio" name="background_theme" value="slate" {% if sections.background_theme == "slate" %}checked{% endif %} />
+                <article class="rounded-3xl border border-slate-200 bg-white p-4 transition peer-checked:border-accent peer-checked:ring-2 peer-checked:ring-accent/20">
+                  <div class="h-24 rounded-2xl border border-slate-200 bg-[#edf1f5]"></div>
+                  <h3 class="mt-3 text-sm font-bold text-slate-900">Slate</h3>
+                  <p class="mt-1 text-xs text-slate-500">Muted cool gray</p>
+                </article>
+              </label>
             </div>
           </section>
 
@@ -290,9 +287,16 @@
           </div>
         </form>
       {% else %}
-        <form class="mt-8 space-y-10" method="post" action="/portfolios/new">
+        <form
+          id="portfolio-details-form"
+          class="mt-8 space-y-10"
+          method="post"
+          action="{{ form_action }}"
+          data-draft-key="portfolio-details:{{ form_action }}"
+        >
           <input type="hidden" name="step" value="details" />
           <input type="hidden" name="theme_slug" value="{{ form_data.theme_slug }}" />
+          <input type="hidden" name="background_theme" value="{{ sections.background_theme }}" />
           <input type="hidden" name="section_experience" value="{% if sections.experience %}yes{% else %}no{% endif %}" />
           <input type="hidden" name="section_contact" value="{% if sections.contact %}yes{% else %}no{% endif %}" />
           {% if sections.contact_fields.github %}<input type="hidden" name="contact_field_github" value="on" />{% endif %}
@@ -307,7 +311,7 @@
                 <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Selected Theme</p>
                 <h2 class="mt-2 text-2xl font-bold text-slate-900">{{ theme_options | selectattr("slug", "equalto", form_data.theme_slug) | map(attribute="label") | first }}</h2>
               </div>
-              <button class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="submit" name="step" value="customize">Back to customize</button>
+              <button class="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="submit" name="nav" value="customize">Back to customize</button>
             </div>
           </section>
 
@@ -516,6 +520,10 @@
                   <span class="mb-2 block text-sm font-semibold text-slate-700">Phone number</span>
                   <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="text" name="phone_number" value="{{ form_data.phone_number }}" placeholder="+1 555 123 4567" />
                 </label>
+                <label class="block md:col-span-2">
+                  <span class="mb-2 block text-sm font-semibold text-slate-700">Resume URL</span>
+                  <input class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white" type="url" name="resume_url" value="{{ form_data.resume_url }}" placeholder="https://example.com/resume.pdf" />
+                </label>
               </div>
             </section>
           {% endif %}
@@ -526,8 +534,8 @@
           </label>
 
           <div class="flex flex-wrap gap-3">
-            <button class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">Create portfolio</button>
-            <button class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="submit" name="step" value="customize">Back</button>
+            <button class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">{% if is_edit %}Save changes{% else %}Create portfolio{% endif %}</button>
+            <button class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300" type="submit" name="nav" value="customize">Back</button>
           </div>
         </form>
       {% endif %}
@@ -618,10 +626,85 @@
       });
     };
 
+    const detailsForm = document.getElementById("portfolio-details-form");
+
+    const restoreDraft = () => {
+      if (!detailsForm) return;
+      const draftKey = detailsForm.dataset.draftKey;
+      if (!draftKey) return;
+
+      const rawDraft = sessionStorage.getItem(draftKey);
+      if (!rawDraft) return;
+
+      try {
+        const draft = JSON.parse(rawDraft);
+        Object.entries(draft).forEach(([name, value]) => {
+          const controls = Array.from(detailsForm.querySelectorAll(`[name="${name}"]`));
+          const visibleControls = controls.filter((control) => control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement)
+            .filter((control) => control.type !== "hidden");
+
+          if (Array.isArray(value)) {
+            visibleControls.forEach((control, index) => {
+              if (control.type === "checkbox") {
+                control.checked = Boolean(value[index]);
+                return;
+              }
+              control.value = typeof value[index] === "string" ? value[index] : "";
+            });
+            return;
+          }
+
+          visibleControls.forEach((control) => {
+            if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement)) return;
+            if (control.type === "checkbox") {
+              control.checked = Boolean(value);
+              return;
+            }
+            control.value = typeof value === "string" ? value : "";
+          });
+        });
+      } catch {
+        sessionStorage.removeItem(draftKey);
+      }
+    };
+
+    const saveDraft = () => {
+      if (!detailsForm) return;
+      const draftKey = detailsForm.dataset.draftKey;
+      if (!draftKey) return;
+
+      const draft = {};
+      detailsForm.querySelectorAll("input, textarea").forEach((control) => {
+        if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement)) return;
+        if (!control.name || control.type === "hidden") return;
+        const currentValue = control.type === "checkbox" ? control.checked : control.value;
+        if (Object.hasOwn(draft, control.name)) {
+          if (!Array.isArray(draft[control.name])) {
+            draft[control.name] = [draft[control.name]];
+          }
+          draft[control.name].push(currentValue);
+          return;
+        }
+        if (control.type === "checkbox") {
+          draft[control.name] = currentValue;
+          return;
+        }
+        draft[control.name] = currentValue;
+      });
+      sessionStorage.setItem(draftKey, JSON.stringify(draft));
+    };
+
+    restoreDraft();
+
     document.querySelectorAll("[data-contact-toggle]").forEach((input) => {
       input.addEventListener("change", () => syncContactField(input.dataset.contactToggle, input.checked));
       syncContactField(input.dataset.contactToggle, input.checked);
     });
+
+    if (detailsForm) {
+      detailsForm.addEventListener("input", saveDraft);
+      detailsForm.addEventListener("change", saveDraft);
+    }
 
     document.querySelectorAll("[data-add-item]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -630,6 +713,7 @@
         const list = document.querySelector(`[data-repeater-list="${key}"]`);
         if (!template || !list) return;
         list.appendChild(template.content.cloneNode(true));
+        saveDraft();
       });
     });
 
@@ -642,6 +726,7 @@
       if (!list) return;
       if (list.querySelectorAll(`[data-repeater-item="${key}"]`).length <= 1) return;
       target.closest(`[data-repeater-item="${key}"]`)?.remove();
+      saveDraft();
     });
   </script>
 {% endblock %}

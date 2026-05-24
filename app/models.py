@@ -30,7 +30,7 @@ class Portfolio(Base):
         nullable=False,
     )
     subdomain: Mapped[str] = mapped_column(String(63), nullable=False)
-    theme_slug: Mapped[str] = mapped_column(String(100), nullable=False, default="default")
+    theme_slug: Mapped[str] = mapped_column(String(100), nullable=False, default="default_template1")
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     title_tagline: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str] = mapped_column(Text, nullable=False)

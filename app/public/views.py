@@ -16,25 +16,21 @@ from app.models import Portfolio, Project, User
 router = APIRouter(tags=["public"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-SUBDOMAIN_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$")
+SUBDOMAIN_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")
 CONTACT_FIELDS = ("github", "leetcode", "linkedin", "email", "phone")
+PRIMARY_THEME_SLUG = "default_template1"
+PRIMARY_THEME_TEMPLATE = "Templates/Default_Template1.html"
+BACKGROUND_THEME_OPTIONS = ("ivory", "mint", "sky", "peach", "slate")
 THEME_OPTIONS = (
     {
-        "slug": "default",
-        "label": "Default Theme",
-        "description": "Current split portfolio page with hero, side cards, and section blocks.",
-    },
-    {
-        "slug": "default_template1",
+        "slug": PRIMARY_THEME_SLUG,
         "label": "Template 1",
         "description": "Left sidebar portfolio with scrolling content and editorial sections.",
     },
-    {
-        "slug": "default_template2",
-        "label": "Template 2",
-        "description": "Dark bento dashboard portfolio with cards, stats, and project tiles.",
-    },
 )
+THEME_TEMPLATE_MAP = {
+    PRIMARY_THEME_SLUG: PRIMARY_THEME_TEMPLATE,
+}
 
 
 def _is_local_request(request: Request) -> bool:
@@ -107,6 +103,7 @@ def _parse_skills(raw: str | None, bio: str = "") -> list[str]:
 def _normalize_section_config(raw: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = raw or {}
     contact_fields = payload.get("contact_fields", {})
+    background_theme = str(payload.get("background_theme", "ivory")).strip().lower()
     return {
         "education": True,
         "projects": True,
@@ -114,6 +111,9 @@ def _normalize_section_config(raw: dict[str, Any] | None = None) -> dict[str, An
         "skills": True,
         "certificates": True,
         "contact": bool(payload.get("contact", False)),
+        "background_theme": (
+            background_theme if background_theme in BACKGROUND_THEME_OPTIONS else "ivory"
+        ),
         "contact_fields": {
             name: bool(contact_fields.get(name, False)) for name in CONTACT_FIELDS
         },
@@ -127,7 +127,7 @@ def _default_form_data() -> dict[str, Any]:
         "full_name": "",
         "title_tagline": "",
         "bio": "",
-        "theme_slug": "default",
+        "theme_slug": PRIMARY_THEME_SLUG,
         "is_published": True,
         "education_text": "",
         "skills_text": "",
@@ -136,6 +136,7 @@ def _default_form_data() -> dict[str, Any]:
         "linkedin_url": "",
         "contact_email": "",
         "phone_number": "",
+        "resume_url": "",
         "sections": _normalize_section_config(),
         "projects": [{"title": "", "description": "", "live_url": ""}],
         "experiences": [{"role": "", "company": "", "duration": "", "description": ""}],
@@ -147,11 +148,21 @@ def _theme_slugs() -> set[str]:
     return {theme["slug"] for theme in THEME_OPTIONS}
 
 
+def _normalize_theme_slug(theme_slug: str | None) -> str:
+    normalized = (theme_slug or "").strip().lower()
+    return normalized if normalized in _theme_slugs() else PRIMARY_THEME_SLUG
+
+
+def _resolve_portfolio_template(theme_slug: str | None) -> str:
+    return THEME_TEMPLATE_MAP.get(_normalize_theme_slug(theme_slug), PRIMARY_THEME_TEMPLATE)
+
+
 def _sections_from_form(form: Any) -> dict[str, Any]:
     return _normalize_section_config(
         {
             "experience": form.get("section_experience") == "yes",
             "contact": form.get("section_contact") == "yes",
+            "background_theme": form.get("background_theme", "ivory"),
             "contact_fields": {
                 "github": "contact_field_github" in form,
                 "leetcode": "contact_field_leetcode" in form,
@@ -165,8 +176,9 @@ def _sections_from_form(form: Any) -> dict[str, Any]:
 
 def _deserialize_portfolio(portfolio: Portfolio) -> dict[str, Any]:
     contact_data = _parse_json_object(portfolio.contact_data)
+    sections = _normalize_section_config(_parse_json_object(portfolio.section_config))
     return {
-        "sections": _normalize_section_config(_parse_json_object(portfolio.section_config)),
+        "sections": sections,
         "education_text": portfolio.education_text or "",
         "skills": _parse_skills(portfolio.skills_text, portfolio.bio),
         "experiences": _parse_json_list(portfolio.experiences_json),
@@ -179,6 +191,20 @@ def _deserialize_portfolio(portfolio: Portfolio) -> dict[str, Any]:
             ("Email", contact_data.get("contact_email", "")),
             ("Phone Number", contact_data.get("phone_number", "")),
         ],
+        "resume_url": contact_data.get("resume_url", ""),
+        "contact_visibility": {
+            "contact": bool(contact_data.get("display_contact", sections["contact"])),
+            "github": bool(contact_data.get("display_github", sections["contact_fields"]["github"])),
+            "leetcode": bool(
+                contact_data.get("display_leetcode", sections["contact_fields"]["leetcode"])
+            ),
+            "linkedin": bool(
+                contact_data.get("display_linkedin", sections["contact_fields"]["linkedin"])
+            ),
+            "email": bool(contact_data.get("display_email", sections["contact_fields"]["email"])),
+            "phone": bool(contact_data.get("display_phone", sections["contact_fields"]["phone"])),
+            "resume": bool(contact_data.get("display_resume", bool(contact_data.get("resume_url")))),
+        },
     }
 
 
@@ -236,9 +262,11 @@ def _render_dashboard(request: Request, user: User, portfolios: list[Portfolio])
             "subdomain": portfolio.subdomain,
             "full_name": portfolio.full_name,
             "title_tagline": portfolio.title_tagline,
+            "theme_slug": portfolio.theme_slug,
             "is_published": portfolio.is_published,
             "project_count": len(portfolio.projects),
             "preview_url": _build_site_url(request, portfolio.subdomain),
+            "edit_url": f"/portfolios/{portfolio.id}/edit",
         }
         for portfolio in portfolios
     ]
@@ -248,6 +276,7 @@ def _render_dashboard(request: Request, user: User, portfolios: list[Portfolio])
         {
             "current_user": user,
             "portfolios": items,
+            "can_create_portfolio": not portfolios,
         },
     )
 
@@ -257,12 +286,18 @@ def _render_portfolio_form(
     user: User,
     error: str | None = None,
     form_data: dict[str, Any] | None = None,
-    step: str = "customize",
+    step: str | None = None,
+    form_action: str = "/portfolios/new",
+    form_mode: str = "create",
 ) -> HTMLResponse:
     defaults = _default_form_data()
+
+    if form_mode == "create":
+        defaults["contact_email"] = user.email
+
     if form_data:
         defaults.update(form_data)
-    defaults["step"] = step
+    defaults["step"] = step or defaults.get("step", "customize")
     return _render_template(
         request,
         "portfolio_form.html",
@@ -271,6 +306,8 @@ def _render_portfolio_form(
             "error": error,
             "form_data": defaults,
             "theme_options": THEME_OPTIONS,
+            "form_action": form_action,
+            "form_mode": form_mode,
         },
         status_code=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK,
     )
@@ -299,6 +336,16 @@ def _load_user_portfolios(db: Session, user_id: int) -> list[Portfolio]:
     )
 
 
+def _get_primary_portfolio(db: Session, user_id: int) -> Portfolio | None:
+    return (
+        db.query(Portfolio)
+        .options(selectinload(Portfolio.projects))
+        .filter(Portfolio.user_id == user_id)
+        .order_by(Portfolio.id.asc())
+        .first()
+    )
+
+
 def _require_user(request: Request, db: Session) -> User | RedirectResponse:
     user = _get_current_user(request, db)
     if user is None:
@@ -306,197 +353,47 @@ def _require_user(request: Request, db: Session) -> User | RedirectResponse:
     return user
 
 
-@router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def render_public_portfolio(
-    request: Request,
-    db: Session = Depends(get_db),
-) -> HTMLResponse:
-    subdomain = _extract_subdomain(request)
-    if not subdomain:
-        if _is_local_request(request):
-            user = _get_current_user(request, db)
-            if user is None:
-                return _render_local_landing(request)
-            return _render_dashboard(request, user, _load_user_portfolios(db, user.id))
-        return _render_not_found(request)
-
-    portfolio = (
-        db.query(Portfolio)
-        .options(selectinload(Portfolio.projects))
-        .filter(Portfolio.subdomain == subdomain, Portfolio.is_published.is_(True))
-        .first()
-    )
-    if portfolio is None:
-        return _render_not_found(request)
-
-    context: dict[str, Any] = {
-        "portfolio": portfolio,
-        "projects": portfolio.projects,
-        "site_url": _build_site_url(request, portfolio.subdomain),
-        **_deserialize_portfolio(portfolio),
+def _portfolio_to_form_data(portfolio: Portfolio) -> dict[str, Any]:
+    details = _deserialize_portfolio(portfolio)
+    contact_data = details["contact_data"]
+    return {
+        "step": "details",
+        "subdomain": portfolio.subdomain,
+        "full_name": portfolio.full_name,
+        "title_tagline": portfolio.title_tagline,
+        "bio": portfolio.bio,
+        "theme_slug": _normalize_theme_slug(portfolio.theme_slug),
+        "is_published": portfolio.is_published,
+        "education_text": portfolio.education_text or "",
+        "skills_text": portfolio.skills_text or "",
+        "github_url": contact_data.get("github_url", ""),
+        "leetcode_url": contact_data.get("leetcode_url", ""),
+        "linkedin_url": contact_data.get("linkedin_url", ""),
+        "contact_email": contact_data.get("contact_email", ""),
+        "phone_number": contact_data.get("phone_number", ""),
+        "resume_url": contact_data.get("resume_url", ""),
+        "sections": details["sections"],
+        "projects": [
+            {
+                "title": project.title,
+                "description": project.description,
+                "live_url": project.live_url or "",
+            }
+            for project in portfolio.projects
+        ]
+        or _default_form_data()["projects"],
+        "experiences": details["experiences"] or _default_form_data()["experiences"],
+        "certificates": details["certificates"] or _default_form_data()["certificates"],
     }
-    return templates.TemplateResponse(
-        request=request,
-        name="portfolio.html",
-        context=context,
-    )
 
 
-@router.get("/login", response_class=HTMLResponse, include_in_schema=False)
-async def login_page(request: Request, db: Session = Depends(get_db)) -> Response:
-    user = _get_current_user(request, db)
-    if user is not None:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_auth_page(request, mode="login")
-
-
-@router.post("/login", include_in_schema=False)
-async def login(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
-) -> Response:
- 
-    normalized_email = email.strip().lower()
-    user = db.query(User).filter(User.email == normalized_email).first()
-
-    if user is None or not verify_password(password, user.password_hash):
-        return _render_auth_page(
-            request,
-            mode="login",
-            error="Invalid email or password.",
-            email=normalized_email,
-        )
-
-    request.session["user_id"] = user.id
-    return RedirectResponse(url="/portfolios/new", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
-async def signup_page(request: Request, db: Session = Depends(get_db)) -> Response:
-    user = _get_current_user(request, db)
-    if user is not None:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-    return _render_auth_page(request, mode="signup")
-
-
-@router.post("/signup", include_in_schema=False)
-async def signup(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...),
-    confirm_password: str = Form(...),
-    db: Session = Depends(get_db),
-) -> Response:
-
-    normalized_email = email.strip().lower()
-
-    if "@" not in normalized_email:
-        return _render_auth_page(
-            request,
-            mode="signup",
-            error="Enter a valid email address.",
-            email=normalized_email,
-        )
-    if len(password) < 8:
-        return _render_auth_page(
-            request,
-            mode="signup",
-            error="Password must be at least 8 characters.",
-            email=normalized_email,
-        )
-    if password != confirm_password:
-        return _render_auth_page(
-            request,
-            mode="signup",
-            error="Passwords do not match.",
-            email=normalized_email,
-        )
-    if db.query(User).filter(User.email == normalized_email).first() is not None:
-        return _render_auth_page(
-            request,
-            mode="signup",
-            error="An account already exists for that email.",
-            email=normalized_email,
-        )
-
-    user = User(
-        email=normalized_email,
-        password_hash=hash_password(password),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    request.session["user_id"] = user.id
-    return RedirectResponse(url="/portfolios/new", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@router.post("/logout", include_in_schema=False)
-async def logout(request: Request) -> Response:
-    request.session.clear()
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@router.get("/portfolios/new", response_class=HTMLResponse, include_in_schema=False)
-async def new_portfolio_page(
-    request: Request,
-    db: Session = Depends(get_db),
-) -> Response:
- 
-    user = _require_user(request, db)
-    if isinstance(user, RedirectResponse):
-        return user
-    return _render_portfolio_form(request, user, step="customize")
-
-
-@router.post("/portfolios/new", include_in_schema=False)
-async def create_portfolio(
-    request: Request,
-    db: Session = Depends(get_db),
-) -> Response:
-
-    user = _require_user(request, db)
-    if isinstance(user, RedirectResponse):
-        return user
-
-    form = await request.form()
-    step_values = form.getlist("step")
-    step = step_values[-1] if step_values else "customize"
-
-    if step == "customize":
-        sections = _sections_from_form(form)
-        normalized_theme = form.get("theme_slug", "").strip().lower() or "default"
-        customize_data = {
-            "step": "details",
-            "theme_slug": normalized_theme,
-            "sections": sections,
-        }
-
-        if normalized_theme not in _theme_slugs():
-            return _render_portfolio_form(
-                request,
-                user,
-                error="Choose a valid theme option.",
-                form_data=customize_data,
-                step="customize",
-            )
-
-        return _render_portfolio_form(
-            request,
-            user,
-            form_data=customize_data,
-            step="details",
-        )
-
+def _collect_portfolio_form_data(form: Any) -> dict[str, Any]:
     def cleaned_list(name: str) -> list[str]:
         return [value.strip() for value in form.getlist(name)]
 
     sections = _sections_from_form(form)
-
     normalized_subdomain = form.get("subdomain", "").strip().lower()
-    normalized_theme = form.get("theme_slug", "").strip().lower() or "default"
+    normalized_theme = _normalize_theme_slug(form.get("theme_slug"))
     cleaned_data = {
         "subdomain": normalized_subdomain,
         "full_name": form.get("full_name", "").strip(),
@@ -511,6 +408,7 @@ async def create_portfolio(
         "linkedin_url": form.get("linkedin_url", "").strip(),
         "contact_email": form.get("contact_email", "").strip(),
         "phone_number": form.get("phone_number", "").strip(),
+        "resume_url": form.get("resume_url", "").strip(),
         "sections": sections,
         "step": "details",
     }
@@ -576,6 +474,20 @@ async def create_portfolio(
     cleaned_data["projects"] = projects or _default_form_data()["projects"]
     cleaned_data["experiences"] = experiences or _default_form_data()["experiences"]
     cleaned_data["certificates"] = certificates or _default_form_data()["certificates"]
+    return cleaned_data
+
+
+def _validate_portfolio_form_data(
+    cleaned_data: dict[str, Any],
+    db: Session,
+    existing_portfolio: Portfolio | None = None,
+) -> str | None:
+    normalized_subdomain = cleaned_data["subdomain"]
+    normalized_theme = cleaned_data["theme_slug"]
+    sections = cleaned_data["sections"]
+    projects = cleaned_data["projects"]
+    experiences = cleaned_data["experiences"]
+    certificates = cleaned_data["certificates"]
 
     if not all(
         [
@@ -584,127 +496,54 @@ async def create_portfolio(
             cleaned_data["title_tagline"],
         ]
     ):
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Fill in all required portfolio details.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Fill in all required portfolio details."
 
     if not cleaned_data["education_text"]:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Education is mandatory.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Education is mandatory."
 
     if not _parse_skills(cleaned_data["skills_text"]):
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Add at least one skill.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Add at least one skill."
 
     if not SUBDOMAIN_PATTERN.match(normalized_subdomain):
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Subdomain must be 3-63 characters using lowercase letters, numbers, or hyphens.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Subdomain must be 3-63 characters using lowercase letters, numbers, or hyphens."
 
     if normalized_theme not in _theme_slugs():
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Choose a valid theme option.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Choose a valid theme option."
 
-    if db.query(Portfolio).filter(Portfolio.subdomain == normalized_subdomain).first() is not None:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="That subdomain is already in use.",
-            form_data=cleaned_data,
-            step="details",
-        )
+    subdomain_query = db.query(Portfolio).filter(Portfolio.subdomain == normalized_subdomain)
+    if existing_portfolio is not None:
+        subdomain_query = subdomain_query.filter(Portfolio.id != existing_portfolio.id)
+    if subdomain_query.first() is not None:
+        return "That subdomain is already in use."
 
     invalid_project = any(bool(item["title"]) != bool(item["description"]) for item in projects)
     if invalid_project:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Each project needs both a title and description.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Each project needs both a title and description."
 
     valid_projects = [item for item in projects if item["title"] and item["description"]]
     if not valid_projects:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Add at least one project.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Add at least one project."
 
     invalid_experience = any(
         any(item.values()) and (not item["role"] or not item["company"] or not item["description"])
         for item in experiences
     )
     if invalid_experience:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Each experience entry must include role, company, and description.",
-            form_data=cleaned_data,
-            step="details",
-        )
-
-    valid_experiences = [
-        item for item in experiences if item["role"] and item["company"] and item["description"]
-    ]
+        return "Each experience entry must include role, company, and description."
 
     invalid_certificate = any(
         any(item.values()) and (not item["name"] or not item["issuer"])
         for item in certificates
     )
     if invalid_certificate:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Each certificate entry must include a certificate name and issuer.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Each certificate entry must include a certificate name and issuer."
 
     valid_certificates = [item for item in certificates if item["name"] and item["issuer"]]
     if not valid_certificates:
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Add at least one certificate.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Add at least one certificate."
 
     if sections["contact"] and not any(sections["contact_fields"].values()):
-        return _render_portfolio_form(
-            request,
-            user,
-            error="Select at least one contact field when Contact Information is enabled.",
-            form_data=cleaned_data,
-            step="details",
-        )
+        return "Select at least one contact field when Contact Information is enabled."
 
     contact_key_map = {
         "github": "github_url",
@@ -720,61 +559,316 @@ async def create_portfolio(
             if enabled and not cleaned_data[contact_key_map[field]]
         ]
         if missing_contact_values:
-            return _render_portfolio_form(
-                request,
-                user,
-                error="Fill in each enabled contact field.",
-                form_data=cleaned_data,
-                step="details",
-            )
+            return "Fill in each enabled contact field."
 
-    portfolio = Portfolio(
-        user_id=user.id,
-        subdomain=normalized_subdomain,
-        theme_slug=normalized_theme,
-        full_name=cleaned_data["full_name"],
-        title_tagline=cleaned_data["title_tagline"],
-        bio=cleaned_data["bio"],
-        section_config=json.dumps(sections),
-        education_text=cleaned_data["education_text"],
-        skills_text=cleaned_data["skills_text"],
-        experiences_json=json.dumps(valid_experiences if sections["experience"] else []),
-        certificates_json=json.dumps(valid_certificates),
-        contact_data=json.dumps(
-            {
-                key: cleaned_data[key]
-                for key in (
-                    "github_url",
-                    "leetcode_url",
-                    "linkedin_url",
-                    "contact_email",
-                    "phone_number",
-                )
-                if sections["contact"]
-                and (
-                    (key == "github_url" and sections["contact_fields"]["github"])
-                    or (key == "leetcode_url" and sections["contact_fields"]["leetcode"])
-                    or (key == "linkedin_url" and sections["contact_fields"]["linkedin"])
-                    or (key == "contact_email" and sections["contact_fields"]["email"])
-                    or (key == "phone_number" and sections["contact_fields"]["phone"])
-                )
-            }
-        ),
-        is_published=cleaned_data["is_published"],
+    cleaned_data["valid_projects"] = valid_projects
+    cleaned_data["valid_experiences"] = [
+        item for item in experiences if item["role"] and item["company"] and item["description"]
+    ]
+    cleaned_data["valid_certificates"] = valid_certificates
+    cleaned_data["contact_data"] = {
+        "display_contact": bool(sections["contact"]),
+        "display_github": bool(sections["contact_fields"]["github"]),
+        "display_leetcode": bool(sections["contact_fields"]["leetcode"]),
+        "display_linkedin": bool(sections["contact_fields"]["linkedin"]),
+        "display_email": bool(sections["contact_fields"]["email"]),
+        "display_phone": bool(sections["contact_fields"]["phone"]),
+        "display_resume": bool(sections["contact"] and cleaned_data["resume_url"]),
+        "github_url": cleaned_data["github_url"] if sections["contact_fields"]["github"] else "",
+        "leetcode_url": cleaned_data["leetcode_url"] if sections["contact_fields"]["leetcode"] else "",
+        "linkedin_url": cleaned_data["linkedin_url"] if sections["contact_fields"]["linkedin"] else "",
+        "contact_email": cleaned_data["contact_email"] if sections["contact_fields"]["email"] else "",
+        "phone_number": cleaned_data["phone_number"] if sections["contact_fields"]["phone"] else "",
+        "resume_url": cleaned_data["resume_url"] if sections["contact"] else "",
+    }
+    return None
+
+
+def _save_portfolio(
+    db: Session,
+    user: User,
+    cleaned_data: dict[str, Any],
+    portfolio: Portfolio | None = None,
+) -> Portfolio:
+    target = portfolio or Portfolio(user_id=user.id, subdomain=cleaned_data["subdomain"])
+    target.subdomain = cleaned_data["subdomain"]
+    target.theme_slug = cleaned_data["theme_slug"]
+    target.full_name = cleaned_data["full_name"]
+    target.title_tagline = cleaned_data["title_tagline"]
+    target.bio = cleaned_data["bio"]
+    target.section_config = json.dumps(cleaned_data["sections"])
+    target.education_text = cleaned_data["education_text"]
+    target.skills_text = cleaned_data["skills_text"]
+    target.experiences_json = json.dumps(
+        cleaned_data["valid_experiences"] if cleaned_data["sections"]["experience"] else []
     )
-    db.add(portfolio)
-    db.flush()
-
-    for index, item in enumerate(valid_projects):
-        db.add(
-            Project(
-                portfolio_id=portfolio.id,
-                title=item["title"],
-                description=item["description"],
-                live_url=item["live_url"] or None,
-                display_order=index,
-            )
+    target.certificates_json = json.dumps(cleaned_data["valid_certificates"])
+    target.contact_data = json.dumps(cleaned_data["contact_data"])
+    target.is_published = cleaned_data["is_published"]
+    target.projects = [
+        Project(
+            title=item["title"],
+            description=item["description"],
+            live_url=item["live_url"] or None,
+            display_order=index,
         )
+        for index, item in enumerate(cleaned_data["valid_projects"])
+    ]
+
+    if portfolio is None:
+        db.add(target)
 
     db.commit()
+    db.refresh(target)
+    return target
+
+
+@router.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def render_public_portfolio(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    subdomain = _extract_subdomain(request)
+    if not subdomain:
+        user = _get_current_user(request, db)
+        if user is None:
+            return _render_local_landing(request)
+        return _render_dashboard(request, user, _load_user_portfolios(db, user.id))
+
+    portfolio = (
+        db.query(Portfolio)
+        .options(selectinload(Portfolio.projects))
+        .filter(Portfolio.subdomain == subdomain, Portfolio.is_published.is_(True))
+        .first()
+    )
+    if portfolio is None:
+        return _render_not_found(request)
+
+    context: dict[str, Any] = {
+        "portfolio": portfolio,
+        "projects": portfolio.projects,
+        "site_url": _build_site_url(request, portfolio.subdomain),
+        **_deserialize_portfolio(portfolio),
+    }
+    return templates.TemplateResponse(
+        request=request,
+        name=_resolve_portfolio_template(portfolio.theme_slug),
+        context=context,
+    )
+
+
+@router.get("/login", response_class=HTMLResponse, include_in_schema=False)
+async def login_page(request: Request, db: Session = Depends(get_db)) -> Response:
+    user = _get_current_user(request, db)
+    if user is not None:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return _render_auth_page(request, mode="login")
+
+
+@router.post("/login", include_in_schema=False)
+async def login(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+) -> Response:
+ 
+    normalized_email = email.strip().lower()
+    user = db.query(User).filter(User.email == normalized_email).first()
+
+    if user is None or not verify_password(password, user.password_hash):
+        return _render_auth_page(
+            request,
+            mode="login",
+            error="Invalid email or password.",
+            email=normalized_email,
+        )
+
+    request.session["user_id"] = user.id
+    return RedirectResponse(url="/portfolios/new", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
+async def signup_page(request: Request, db: Session = Depends(get_db)) -> Response:
+    user = _get_current_user(request, db)
+    if user is not None:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return _render_auth_page(request, mode="signup")
+
+
+@router.post("/signup", include_in_schema=False)
+async def signup(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    db: Session = Depends(get_db),
+) -> Response:
+    normalized_email = email.strip().lower()
+    if password != confirm_password:
+        return _render_auth_page(
+            request,
+            mode="signup",
+            error="Passwords do not match.",
+            email=normalized_email,
+        )
+
+    if db.query(User).filter(User.email == normalized_email).first():
+        return _render_auth_page(
+            request,
+            mode="signup",
+            error="That email is already registered.",
+            email=normalized_email,
+        )
+
+    user = User(email=normalized_email, password_hash=hash_password(password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    request.session["user_id"] = user.id
+    return RedirectResponse(url="/portfolios/new", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/logout", include_in_schema=False)
+async def logout(request: Request) -> Response:
+    request.session.clear()
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/logout", include_in_schema=False)
+async def logout_post(request: Request) -> Response:
+    request.session.clear()
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/portfolios/new", response_class=HTMLResponse, include_in_schema=False)
+async def new_portfolio_page(request: Request, db: Session = Depends(get_db)) -> Response:
+    user = _require_user(request, db)
+    if isinstance(user, Response):
+        return user
+
+    existing_portfolio = _get_primary_portfolio(db, user.id)
+    if existing_portfolio:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+    return _render_portfolio_form(request, user)
+
+
+@router.post("/portfolios/new", include_in_schema=False)
+async def create_portfolio(request: Request, db: Session = Depends(get_db)) -> Response:
+    user = _require_user(request, db)
+    if isinstance(user, Response):
+        return user
+
+    form_data = await request.form()
+    nav = form_data.get("nav")
+    step = form_data.get("step", "customize")
+    cleaned_data = _collect_portfolio_form_data(form_data)
+
+    if nav == "customize":
+        return _render_portfolio_form(
+            request,
+            user,
+            form_data=cleaned_data,
+            step="customize",
+        )
+
+    if step == "customize":
+        return _render_portfolio_form(
+            request,
+            user,
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    error = _validate_portfolio_form_data(cleaned_data, db)
+
+    if error:
+        return _render_portfolio_form(
+            request,
+            user,
+            error=error,
+            form_data=cleaned_data,
+            step="details",
+        )
+
+    _save_portfolio(db, user, cleaned_data)
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get(
+    "/portfolios/{portfolio_id}/edit", response_class=HTMLResponse, include_in_schema=False
+)
+async def edit_portfolio_page(
+    portfolio_id: int, request: Request, db: Session = Depends(get_db)
+) -> Response:
+    user = _require_user(request, db)
+    if isinstance(user, Response):
+        return user
+
+    portfolio = db.get(Portfolio, portfolio_id)
+    if portfolio is None or portfolio.user_id != user.id:
+        return _render_not_found(request)
+
+    return _render_portfolio_form(
+        request,
+        user,
+        form_data=_portfolio_to_form_data(portfolio),
+        form_action=f"/portfolios/{portfolio.id}/edit",
+        form_mode="edit",
+    )
+
+
+@router.post("/portfolios/{portfolio_id}/edit", include_in_schema=False)
+async def update_portfolio(
+    portfolio_id: int, request: Request, db: Session = Depends(get_db)
+) -> Response:
+    user = _require_user(request, db)
+    if isinstance(user, Response):
+        return user
+
+    portfolio = db.get(Portfolio, portfolio_id)
+    if portfolio is None or portfolio.user_id != user.id:
+        return _render_not_found(request)
+
+    form_data = await request.form()
+    nav = form_data.get("nav")
+    step = form_data.get("step", "customize")
+    cleaned_data = _collect_portfolio_form_data(form_data)
+
+    if nav == "customize":
+        return _render_portfolio_form(
+            request,
+            user,
+            form_data=cleaned_data,
+            step="customize",
+            form_action=f"/portfolios/{portfolio.id}/edit",
+            form_mode="edit",
+        )
+
+    if step == "customize":
+        return _render_portfolio_form(
+            request,
+            user,
+            form_data=cleaned_data,
+            step="details",
+            form_action=f"/portfolios/{portfolio.id}/edit",
+            form_mode="edit",
+        )
+
+    error = _validate_portfolio_form_data(cleaned_data, db, existing_portfolio=portfolio)
+
+    if error:
+        return _render_portfolio_form(
+            request,
+            user,
+            error=error,
+            form_data=cleaned_data,
+            step="details",
+            form_action=f"/portfolios/{portfolio.id}/edit",
+            form_mode="edit",
+        )
+
+    _save_portfolio(db, user, cleaned_data, portfolio=portfolio)
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
