@@ -42,12 +42,6 @@
         <span class="rounded-full px-4 py-2 {% if step == 'details' %}bg-slate-900 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">2. Details</span>
       </div>
 
-      {% if error %}
-        <div class="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-          {{ error }}
-        </div>
-      {% endif %}
-
       {% if step == "customize" %}
         <form class="mt-8 space-y-10" method="post" action="{{ form_action }}">
           <input type="hidden" name="step" value="customize" />

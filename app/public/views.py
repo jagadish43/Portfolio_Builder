@@ -222,13 +222,51 @@ def _get_current_user(request: Request, db: Session) -> User | None:
     return db.get(User, user_id)
 
 
+def _flash_message(request: Request, level: str, message: str) -> None:
+    normalized_level = level.strip().lower()
+    if normalized_level not in {"success", "warning", "error"}:
+        normalized_level = "warning"
+
+    existing = request.session.get("toast_messages", [])
+    messages = existing if isinstance(existing, list) else []
+    messages.append({"level": normalized_level, "message": message})
+    request.session["toast_messages"] = messages
+
+
+def _consume_flash_messages(request: Request) -> list[dict[str, str]]:
+    raw_messages = request.session.pop("toast_messages", [])
+    if not isinstance(raw_messages, list):
+        return []
+
+    messages: list[dict[str, str]] = []
+    for item in raw_messages:
+        if not isinstance(item, dict):
+            continue
+        level = str(item.get("level", "warning")).strip().lower()
+        if level not in {"success", "warning", "error"}:
+            level = "warning"
+        message = str(item.get("message", "")).strip()
+        if message:
+            messages.append({"level": level, "message": message})
+    return messages
+
+
 def _render_template(
     request: Request,
     name: str,
     context: dict[str, Any] | None = None,
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
-    payload = {"current_user": None, **(context or {})}
+    page_context = dict(context or {})
+    page_toasts = page_context.pop("toast_messages", [])
+    if not isinstance(page_toasts, list):
+        page_toasts = []
+
+    payload = {
+        "current_user": None,
+        "toast_messages": [*_consume_flash_messages(request), *page_toasts],
+        **page_context,
+    }
     return templates.TemplateResponse(
         request=request,
         name=name,
@@ -243,6 +281,7 @@ def _render_auth_page(
     error: str | None = None,
     email: str = "",
 ) -> HTMLResponse:
+    toast_messages = [{"level": "error", "message": error}] if error else []
     return _render_template(
         request,
         "auth.html",
@@ -250,6 +289,7 @@ def _render_auth_page(
             "mode": mode,
             "error": error,
             "email": email,
+            "toast_messages": toast_messages,
         },
         status_code=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK,
     )
@@ -291,6 +331,7 @@ def _render_portfolio_form(
     form_mode: str = "create",
 ) -> HTMLResponse:
     defaults = _default_form_data()
+    toast_messages = [{"level": "warning", "message": error}] if error else []
 
     if form_mode == "create":
         defaults["contact_email"] = user.email
@@ -308,6 +349,7 @@ def _render_portfolio_form(
             "theme_options": THEME_OPTIONS,
             "form_action": form_action,
             "form_mode": form_mode,
+            "toast_messages": toast_messages,
         },
         status_code=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK,
     )
@@ -750,6 +792,7 @@ async def new_portfolio_page(request: Request, db: Session = Depends(get_db)) ->
 
     existing_portfolio = _get_primary_portfolio(db, user.id)
     if existing_portfolio:
+        _flash_message(request, "warning", "You already have a portfolio. Edit the existing one instead.")
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     return _render_portfolio_form(request, user)
@@ -794,6 +837,7 @@ async def create_portfolio(request: Request, db: Session = Depends(get_db)) -> R
         )
 
     _save_portfolio(db, user, cleaned_data)
+    _flash_message(request, "success", "Portfolio created successfully.")
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -871,4 +915,5 @@ async def update_portfolio(
         )
 
     _save_portfolio(db, user, cleaned_data, portfolio=portfolio)
+    _flash_message(request, "success", "Portfolio updated successfully.")
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

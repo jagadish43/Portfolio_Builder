@@ -25,6 +25,97 @@
   </head>
   <body class="min-h-screen bg-slate-100 text-ink antialiased">
     <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.16),_transparent_25%)]"></div>
+    <div
+      id="toast-region"
+      class="pointer-events-none fixed right-4 top-4 z-50 flex w-full max-w-sm flex-col gap-3"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
     {% block content %}{% endblock %}
+    <script>
+      (() => {
+        const toastRegion = document.getElementById("toast-region");
+        const initialToasts = {{ toast_messages | default([], true) | tojson }};
+        const toastStyles = {
+          success: {
+            card: "border-emerald-200 bg-emerald-50 text-emerald-900",
+            icon: "text-emerald-600",
+            label: "Success",
+            symbol: "✓",
+          },
+          warning: {
+            card: "border-amber-200 bg-amber-50 text-amber-900",
+            icon: "text-amber-600",
+            label: "Warning",
+            symbol: "!",
+          },
+          error: {
+            card: "border-rose-200 bg-rose-50 text-rose-900",
+            icon: "text-rose-600",
+            label: "Error",
+            symbol: "×",
+          },
+        };
+
+        if (!toastRegion) {
+          return;
+        }
+
+        function removeToast(toast) {
+          toast.classList.add("translate-x-4", "opacity-0");
+          window.setTimeout(() => toast.remove(), 220);
+        }
+
+        function createToast(level, message) {
+          const style = toastStyles[level] || toastStyles.warning;
+          const toast = document.createElement("div");
+          toast.className = [
+            "pointer-events-auto",
+            "translate-x-0",
+            "rounded-2xl",
+            "border",
+            "px-4",
+            "py-3",
+            "shadow-lg",
+            "backdrop-blur",
+            "transition",
+            "duration-200",
+            style.card,
+          ].join(" ");
+          toast.innerHTML = `
+            <div class="flex items-start gap-3">
+              <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/80 text-sm font-bold ${style.icon}">${style.symbol}</div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold">${style.label}</p>
+                <p class="mt-1 text-sm leading-6">${message}</p>
+              </div>
+              <button type="button" class="rounded-full p-1 text-slate-400 transition hover:bg-white/70 hover:text-slate-700" aria-label="Dismiss notification">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          `;
+
+          const closeButton = toast.querySelector("button");
+          closeButton?.addEventListener("click", () => removeToast(toast));
+          toastRegion.appendChild(toast);
+          window.setTimeout(() => removeToast(toast), 4200);
+        }
+
+        window.showToast = (level, message) => {
+          if (!message) {
+            return;
+          }
+          createToast(level, message);
+        };
+
+        initialToasts.forEach((toast) => {
+          if (toast?.message) {
+            createToast(toast.level, toast.message);
+          }
+        });
+      })();
+    </script>
   </body>
 </html>
