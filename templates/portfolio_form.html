@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}New Portfolio | Portfolio Builder{% endblock %}
+
+{% block content %}
+  <main class="mx-auto min-h-screen w-full max-w-5xl px-6 py-10 lg:px-10">
+    <section class="rounded-3xl border border-white/70 bg-white/90 p-8 shadow-card backdrop-blur">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-semibold uppercase tracking-[0.22em] text-accent">Manual Portfolio Entry</p>
+          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900">Create a portfolio</h1>
+          <p class="mt-3 text-base text-slate-600">
+            Fill in the required details to generate a portfolio and preview it locally.
+          </p>
+        </div>
+        <a class="text-sm font-semibold text-slate-500 hover:text-accent" href="/">Back to dashboard</a>
+      </div>
+
+      {% if error %}
+        <div class="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form class="mt-8 grid gap-6 md:grid-cols-2" method="post" action="/portfolios/new">
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Subdomain *</span>
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            type="text"
+            name="subdomain"
+            placeholder="alex"
+            value="{{ form_data.subdomain }}"
+            required
+          />
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Theme slug</span>
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            type="text"
+            name="theme_slug"
+            placeholder="default"
+            value="{{ form_data.theme_slug }}"
+          />
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Full name *</span>
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            type="text"
+            name="full_name"
+            placeholder="Alex Johnson"
+            value="{{ form_data.full_name }}"
+            required
+          />
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Title or tagline *</span>
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            type="text"
+            name="title_tagline"
+            placeholder="Backend Engineer building scalable systems"
+            value="{{ form_data.title_tagline }}"
+            required
+          />
+        </label>
+
+        <label class="block md:col-span-2">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">Bio *</span>
+          <textarea
+            class="min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            name="bio"
+            placeholder="Write your portfolio summary here. Add a line such as Skills: FastAPI, PostgreSQL, Docker if needed."
+            required
+          >{{ form_data.bio }}</textarea>
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">First project title</span>
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            type="text"
+            name="project_title"
+            placeholder="Portfolio Builder"
+            value="{{ form_data.project_title }}"
+          />
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">First project live URL</span>
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            type="url"
+            name="project_live_url"
+            placeholder="https://example.com"
+            value="{{ form_data.project_live_url }}"
+          />
+        </label>
+
+        <label class="block md:col-span-2">
+          <span class="mb-2 block text-sm font-semibold text-slate-700">First project description</span>
+          <textarea
+            class="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-accent focus:bg-white"
+            name="project_description"
+            placeholder="Describe what this project does."
+          >{{ form_data.project_description }}</textarea>
+        </label>
+
+        <label class="inline-flex items-center gap-3 md:col-span-2">
+          <input
+            class="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+            type="checkbox"
+            name="is_published"
+            {% if form_data.is_published %}checked{% endif %}
+          />
+          <span class="text-sm font-medium text-slate-700">Publish immediately</span>
+        </label>
+
+        <div class="md:col-span-2 flex flex-wrap gap-3">
+          <button
+            class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            type="submit"
+          >
+            Create portfolio
+          </button>
+          <a
+            class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+            href="/"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </section>
+  </main>
+{% endblock %}

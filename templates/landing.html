@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio Builder{% endblock %}
+
+{% block content %}
+  <main class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-6 py-12 lg:px-10">
+    <div class="grid w-full gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+      <section class="rounded-3xl border border-white/70 bg-white/90 p-8 shadow-card backdrop-blur xl:p-12">
+        <p class="inline-flex rounded-full bg-accentSoft px-4 py-1 text-sm font-semibold text-accent">
+          User-Based Flow
+        </p>
+        <h1 class="mt-5 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+          Create a portfolio after login
+        </h1>
+        <p class="mt-5 max-w-2xl text-base leading-8 text-slate-600">
+          Start by creating an account or logging in. After that, you will get a manual entry form
+          to fill in the required portfolio details such as subdomain, name, tagline, bio, and an
+          optional first project.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a
+            class="rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"
+            href="/signup"
+          >
+            Create account
+          </a>
+          <a
+            class="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-accent/30 hover:text-accent"
+            href="/login"
+          >
+            Login
+          </a>
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-white/70 bg-white/85 p-8 shadow-card backdrop-blur xl:p-10">
+        <h2 class="text-xl font-bold text-slate-900">What Happens Next</h2>
+        <div class="mt-6 space-y-4 text-sm leading-7 text-slate-600">
+          <article class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <p class="font-semibold text-slate-900">1. Sign up or log in</p>
+            <p class="mt-2">Manual email and password entry is supported from the start page.</p>
+          </article>
+          <article class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <p class="font-semibold text-slate-900">2. Fill in portfolio details</p>
+            <p class="mt-2">Enter your subdomain, full name, title, bio, theme slug, and publish state.</p>
+          </article>
+          <article class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <p class="font-semibold text-slate-900">3. Preview your result</p>
+            <p class="mt-2">Your dashboard will show the generated local preview link for each portfolio.</p>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+{% endblock %}
