@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ portfolio.full_name }} | Portfolio</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;700&family=DM+Sans:wght@400;500;700&family=Manrope:wght@400;500;700&display=swap");
+      :root {
+        --primary: {{ theme_config.primary_color }};
+        --accent: {{ theme_config.accent_color }};
+        --bg: {{ theme_config.background_color }};
+        --surface: {{ theme_config.surface_color }};
+        --text: {{ theme_config.text_color }};
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "{{ theme_config.font_family }}", sans-serif; background: {% if theme_config.mode == "dark" %}#08111f{% else %}var(--bg){% endif %}; color: {% if theme_config.mode == "dark" %}#f8fafc{% else %}var(--text){% endif %}; }
+      a { color: inherit; text-decoration: none; }
+      .shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 56px; }
+      .nav, .hero-card, .section-card { background: {% if theme_config.mode == "dark" %}rgba(15,23,42,0.86){% else %}rgba(255,255,255,0.84){% endif %}; border: 1px solid rgba(148,163,184,0.22); backdrop-filter: blur(16px); }
+      .nav { position: sticky; top: 16px; z-index: 20; display: flex; justify-content: space-between; align-items: center; padding: 16px 22px; border-radius: 24px; }
+      .nav-links { display: flex; flex-wrap: wrap; gap: 10px; }
+      .nav-links a { padding: 10px 16px; border-radius: 999px; background: rgba(15,118,110,0.1); }
+      .hero { display: grid; gap: 24px; grid-template-columns: 1.15fr 0.85fr; margin-top: 28px; }
+      .hero-card { padding: 40px; border-radius: 36px; }
+      .eyebrow { letter-spacing: .22em; text-transform: uppercase; font-size: 12px; color: var(--primary); font-weight: 700; }
+      h1 { font-size: clamp(2.8rem, 8vw, 5.8rem); line-height: .92; margin: 18px 0; }
+      .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+      .btn { padding: 14px 18px; border-radius: 18px; font-weight: 700; }
+      .btn-primary { background: var(--primary); color: white; }
+      .btn-secondary { border: 1px solid rgba(148,163,184,0.25); }
+      .grid { display: grid; gap: 22px; margin-top: 24px; }
+      .section-card { border-radius: 32px; padding: 34px; }
+      @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .nav { align-items: flex-start; flex-direction: column; gap: 14px; } }
+    </style>
+  </head>
+  <body data-subdomain="{{ portfolio.subdomain }}">
+    <div class="shell">
+      <nav class="nav">
+        <div>
+          <div class="eyebrow">{{ portfolio.theme_slug }}</div>
+          <strong>{{ portfolio.full_name }}</strong>
+        </div>
+        <div class="nav-links">
+          {% for section in ordered_sections %}
+            <a href="#{{ section.key }}">{{ section.title }}</a>
+          {% endfor %}
+        </div>
+      </nav>
+
+      <section class="hero">
+        <article class="hero-card">
+          <div class="eyebrow">Portfolio</div>
+          <h1>{{ portfolio.full_name }}</h1>
+          <p style="font-size: 1.2rem; max-width: 34rem; opacity: .82;">{{ portfolio.title_tagline }}</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#projects">View projects</a>
+            {% if contact_visibility.resume and resume_url %}
+              <a class="btn btn-secondary" href="{{ resume_url }}" target="_blank" rel="noreferrer" data-analytics-event="resume_download">Resume</a>
+            {% endif %}
+          </div>
+        </article>
+        <article class="hero-card" style="background: linear-gradient(180deg, var(--primary), var(--accent)); color: white;">
+          <div class="eyebrow" style="color: rgba(255,255,255,.8);">Snapshot</div>
+          <p style="margin-top: 14px; font-size: 1.1rem; line-height: 1.9;">{{ portfolio.bio }}</p>
+        </article>
+      </section>
+
+      <div class="grid">
+        {% set section_class = "section-card" %}
+        {% set heading_class = "text-2xl font-bold" %}
+        {% include "Templates/partials/sections.html" %}
+      </div>
+    </div>
+    <script>
+      const payload = (eventType, projectSlug = null) => ({
+        subdomain: document.body.dataset.subdomain,
+        event_type: eventType,
+        project_slug: projectSlug,
+        source: document.referrer || "direct",
+        metadata: { path: window.location.pathname },
+      });
+      fetch("/api/analytics/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload("visit")) });
+      document.querySelectorAll("[data-analytics-event]").forEach((node) => {
+        node.addEventListener("click", () => {
+          fetch("/api/analytics/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload(node.dataset.analyticsEvent, node.dataset.projectSlug || null)) });
+        });
+      });
+    </script>
+  </body>
+</html>

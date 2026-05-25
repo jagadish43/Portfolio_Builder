@@ -35,6 +35,7 @@
         method="post"
         action="{% if mode == 'signup' %}/signup{% else %}/login{% endif %}"
       >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
         <label class="block">
           <span class="mb-2 block text-sm font-semibold text-slate-700">Email</span>
           <input

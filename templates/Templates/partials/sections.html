@@ -1,0 +1,116 @@
+{% for section in ordered_sections %}
+  {% if section.key == "about" %}
+    <section id="about" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">About</h2>
+      <p class="mt-4 text-base leading-8 opacity-85">{{ portfolio.bio }}</p>
+    </section>
+  {% elif section.key == "skills" %}
+    <section id="skills" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">Skills</h2>
+      <div class="mt-6 grid gap-5 md:grid-cols-2">
+        {% for category in skill_categories %}
+          <article class="rounded-3xl border p-5" style="border-color: {{ theme_config.accent_color }}33;">
+            <h3 class="text-lg font-bold">{{ category.category_name }}</h3>
+            <div class="mt-4 flex flex-wrap gap-2">
+              {% for skill in category.skills %}
+                <span class="rounded-full px-4 py-2 text-sm font-semibold" style="background: {{ theme_config.accent_color }}22;">{{ skill }}</span>
+              {% endfor %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif section.key == "education" %}
+    <section id="education" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">Education</h2>
+      <div class="mt-6 space-y-4">
+        {% for item in education_entries %}
+          <article class="rounded-3xl border p-5" style="border-color: {{ theme_config.primary_color }}22;">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <h3 class="text-lg font-bold">{{ item.course_name }}{% if item.specialization %} · {{ item.specialization }}{% endif %}</h3>
+              {% if item.start_year or item.end_year %}<span class="text-sm opacity-70">{{ item.start_year }}{% if item.start_year or item.end_year %} - {% endif %}{{ item.end_year }}</span>{% endif %}
+            </div>
+            <p class="mt-2 text-sm font-medium opacity-80">
+              {{ item.institution_name }}
+              {% if item.university %} · {{ item.university }}{% endif %}
+              {% if item.location %} · {{ item.location }}{% endif %}
+            </p>
+            <p class="mt-2 text-xs uppercase tracking-[0.18em] opacity-60">
+              {{ item.custom_type if item.education_type == "Custom" else item.education_type }}
+              {% if item.score %} · {{ item.score }}{% endif %}
+            </p>
+            {% if item.description %}<p class="mt-4 text-sm leading-7 opacity-85">{{ item.description }}</p>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif section.key == "projects" %}
+    <section id="projects" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">Projects</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        {% for project in projects %}
+          <article class="rounded-3xl border p-5" style="border-color: {{ theme_config.primary_color }}33;">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-lg font-bold">{{ project.title }}</h3>
+                {% if project.tech_stack %}<p class="mt-2 text-xs uppercase tracking-[0.18em] opacity-70">{{ project.tech_stack }}</p>{% endif %}
+              </div>
+              {% if project.stars %}<span class="rounded-full px-3 py-1 text-xs font-semibold" style="background: {{ theme_config.primary_color }}22;">★ {{ project.stars }}</span>{% endif %}
+            </div>
+            <p class="mt-4 text-sm leading-7 opacity-85">{{ project.description }}</p>
+            <div class="mt-5 flex flex-wrap gap-3">
+              {% if project.live_url %}
+                <a class="rounded-full px-4 py-2 text-sm font-semibold" href="{{ project.live_url }}" target="_blank" rel="noreferrer" data-analytics-event="project_click" data-project-slug="{{ project.title | lower | replace(' ', '-') }}" style="background: {{ theme_config.primary_color }}; color: white;">Live</a>
+              {% endif %}
+              {% if project.github_url %}
+                <a class="rounded-full border px-4 py-2 text-sm font-semibold" href="{{ project.github_url }}" target="_blank" rel="noreferrer" data-analytics-event="project_click" data-project-slug="{{ project.title | lower | replace(' ', '-') }}">GitHub</a>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif section.key == "experience" %}
+    <section id="experience" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">Experience</h2>
+      <div class="mt-6 space-y-4">
+        {% for item in experiences %}
+          <article class="rounded-3xl border p-5" style="border-color: {{ theme_config.primary_color }}22;">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <h3 class="text-lg font-bold">{{ item.role }}{% if item.company %} · {{ item.company }}{% endif %}</h3>
+              {% if item.duration %}<span class="text-sm opacity-70">{{ item.duration }}</span>{% endif %}
+            </div>
+            <p class="mt-4 text-sm leading-7 opacity-85">{{ item.description }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif section.key == "certificates" %}
+    <section id="certificates" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">Certificates</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        {% for item in certificates %}
+          <article class="rounded-3xl border p-5" style="border-color: {{ theme_config.accent_color }}33;">
+            <h3 class="text-lg font-bold">{{ item.name }}</h3>
+            <p class="mt-2 text-sm opacity-80">{{ item.issuer }}{% if item.year %} · {{ item.year }}{% endif %}</p>
+            {% if item.url %}<a class="mt-4 inline-block text-sm font-semibold" href="{{ item.url }}" target="_blank" rel="noreferrer">View credential</a>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% elif section.key == "contact" %}
+    <section id="contact" class="{{ section_class | default('rounded-[2rem] border p-8') }}">
+      <h2 class="{{ heading_class | default('text-2xl font-bold') }}">Contact</h2>
+      <div class="mt-6 grid gap-3">
+        {% for label, value, visible in contact_items %}
+          {% if visible and value %}
+            <a class="rounded-2xl border px-4 py-3 text-sm font-medium" href="{{ value if value.startswith('http') else 'mailto:' + value if '@' in value else 'tel:' + value }}">{{ label }}: {{ value }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if contact_visibility.resume and resume_url %}
+          <a class="rounded-2xl px-4 py-3 text-sm font-semibold text-white" href="{{ resume_url }}" target="_blank" rel="noreferrer" data-analytics-event="resume_download" style="background: {{ theme_config.primary_color }};">Resume</a>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+{% endfor %}
