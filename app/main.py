@@ -13,6 +13,7 @@ from app.api.routes import router as api_router
 from app.config import STATIC_DIR, get_settings
 from app.database import Base, engine
 from app.public.views import router as public_router
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 
 settings = get_settings()
@@ -125,7 +126,12 @@ app.add_middleware(
     same_site="lax",
     https_only=False,
 )
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]
+)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.include_router(api_router)
