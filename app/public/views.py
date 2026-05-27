@@ -194,7 +194,7 @@ def _render_form(
 def _require_user(request: Request, db: Session) -> User | RedirectResponse:
     user = _get_current_user(request, db)
     if user is None:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     return user
 
 
@@ -323,7 +323,7 @@ async def render_public_portfolio(request: Request, db: Session = Depends(get_db
         user = _get_current_user(request, db)
         if user is None:
             return _render_template(request, "landing.html")
-        return _render_dashboard(request, user, load_user_portfolios(db, user.id), db)
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
     portfolio = (
         db.query(Portfolio)
@@ -352,10 +352,18 @@ async def render_public_portfolio(request: Request, db: Session = Depends(get_db
     )
 
 
+@router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard_page(request: Request, db: Session = Depends(get_db)) -> Response:
+    user = _require_user(request, db)
+    if isinstance(user, Response):
+        return user
+    return _render_dashboard(request, user, load_user_portfolios(db, user.id), db)
+
+
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
 async def login_page(request: Request, db: Session = Depends(get_db)) -> Response:
     if _get_current_user(request, db) is not None:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     return _render_auth_page(request, "login")
 
 
@@ -373,13 +381,13 @@ async def login(
     if user is None or not verify_password(password, user.password_hash):
         return _render_auth_page(request, "login", "Invalid email or password.", normalized_email)
     request.session["user_id"] = user.id
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
 async def signup_page(request: Request, db: Session = Depends(get_db)) -> Response:
     if _get_current_user(request, db) is not None:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     return _render_auth_page(request, "signup")
 
 
@@ -403,7 +411,7 @@ async def signup(
     db.commit()
     db.refresh(user)
     request.session["user_id"] = user.id
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/logout", include_in_schema=False)
@@ -420,7 +428,7 @@ async def new_portfolio_page(request: Request, db: Session = Depends(get_db)) ->
         return user
     if load_primary_portfolio(db, user.id):
         _flash_message(request, "warning", "You already have a portfolio. Edit the existing one instead.")
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     return _render_form(request, user)
 
 
@@ -438,7 +446,7 @@ async def create_portfolio(request: Request, db: Session = Depends(get_db)) -> R
     except Exception as exc:
         return _render_form(request, user, form_payload, str(getattr(exc, "detail", exc)))
     _flash_message(request, "success", "Portfolio created successfully.")
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/portfolios/{portfolio_id}/edit", response_class=HTMLResponse, include_in_schema=False)
@@ -482,7 +490,7 @@ async def update_portfolio_page(portfolio_id: int, request: Request, db: Session
             form_mode="edit",
         )
     _flash_message(request, "success", "Portfolio updated successfully.")
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/portfolios/{portfolio_id}/analytics", response_class=HTMLResponse, include_in_schema=False)
